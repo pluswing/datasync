@@ -1,0 +1,13 @@
+target:
+  kind: mysql
+  config:
+    host: localhost
+    port: 3306
+    user: root
+    password: root
+    database: sample
+upload:
+  kind: s3
+  config:
+    a: 10
+
