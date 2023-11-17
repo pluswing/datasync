@@ -4,12 +4,16 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-	"os"
-
+	"context"
 	"database/sql"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 
-	"github.com/JamesStewy/go-mysqldump"
+	"cloud.google.com/go/storage"
+	"github.com/aliakseiz/go-mysqldump"
+	"github.com/go-sql-driver/mysql"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pluswing/datasync/data"
 	"github.com/spf13/cobra"
@@ -35,6 +39,12 @@ to quickly create a Cobra application.`,
 			cobra.CheckErr(err)
 			fmt.Println(conf)
 			// dbダンプ ...
+			dumpfile := processMysqldump(conf)
+			fmt.Println(dumpfile)
+
+			// アップロード
+			uploadGoogleStorage()
+
 		}
 	},
 }
@@ -55,26 +65,59 @@ func init() {
 
 func processMysqldump(cfg data.TargetMysqlConfigType) string {
 
+	config := mysql.NewConfig()
+	config.User = cfg.User
+	config.Passwd = cfg.Password
+	config.DBName = cfg.Database
+	config.Net = "tcp"
+	config.Addr = fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+
 	dumpDir, err := os.MkdirTemp("", ".datasync")
 	cobra.CheckErr(err)
 
 	dumpFilenameFormat := fmt.Sprintf("%s-20060102T150405", cfg.Database)
 
-	dns := fmt.Sprintf("%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
-	db, err := sql.Open("mysql", dns)
+	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
 
 	// Register database with mysqldump.
-	dumper, err := mysqldump.Register(db, dumpDir, dumpFilenameFormat)
+	dumper, err := mysqldump.Register(db, dumpDir, dumpFilenameFormat, config.DBName)
 	cobra.CheckErr(err)
 
+	// FIXME ダンプファイル名がとれないよ。
 	// Dump database to file.
-	resultFilename, err := dumper.Dump()
+	err = dumper.Dump()
 	cobra.CheckErr(err)
 
-	fmt.Printf("Successiflly mysql dump. %s", resultFilename)
+	fmt.Printf("Successiflly mysql dump. %s\n", dumpFilenameFormat)
 
 	dumper.Close()
 
-	return resultFilename
+	return filepath.Join(dumpDir, dumpFilenameFormat+".sql")
+}
+
+func uploadGoogleStorage() {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	cobra.CheckErr(err)
+	defer client.Close()
+
+	// Open local file.
+	f, err := os.Open("README.md")
+	cobra.CheckErr(err)
+	defer f.Close()
+
+	// ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+	// defer cancel()
+
+	o := client.Bucket("datasync000001").Object("README.md")
+
+	// o = o.If(storage.Conditions{DoesNotExist: true})
+
+	wc := o.NewWriter(ctx)
+	_, err = io.Copy(wc, f)
+	cobra.CheckErr(err)
+
+	err = wc.Close()
+	cobra.CheckErr(err)
 }
