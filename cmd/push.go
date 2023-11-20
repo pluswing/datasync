@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"cloud.google.com/go/storage"
 	"github.com/aliakseiz/go-mysqldump"
@@ -41,6 +40,7 @@ to quickly create a Cobra application.`,
 			// dbダンプ ...
 			dumpfile := processMysqldump(conf)
 			fmt.Println(dumpfile)
+			// TODO zip圧縮
 
 			// アップロード
 			uploadGoogleStorage()
@@ -84,8 +84,6 @@ func processMysqldump(cfg data.TargetMysqlConfigType) string {
 	dumper, err := mysqldump.Register(db, dumpDir, dumpFilenameFormat, config.DBName)
 	cobra.CheckErr(err)
 
-	// FIXME ダンプファイル名がとれないよ。
-	// Dump database to file.
 	err = dumper.Dump()
 	cobra.CheckErr(err)
 
@@ -93,7 +91,7 @@ func processMysqldump(cfg data.TargetMysqlConfigType) string {
 
 	dumper.Close()
 
-	return filepath.Join(dumpDir, dumpFilenameFormat+".sql")
+	return dumpDir
 }
 
 func uploadGoogleStorage() {
