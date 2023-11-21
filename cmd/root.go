@@ -14,7 +14,7 @@ import (
 
 var (
 	cfgFile string
-	config  data.ConfigType
+	setting data.SettingType
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -65,6 +65,6 @@ func initConfig() {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 
-	err := viper.Unmarshal(&config)
+	err := viper.Unmarshal(&setting)
 	cobra.CheckErr(err)
 }

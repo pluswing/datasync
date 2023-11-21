@@ -29,3 +29,14 @@ upload:
 target:
   kind: rails
 ```
+
+.datasync
+```jsonl
+{"hash code": "", "timestamp": "", "comment": "...."}
+{"hash code": "", "timestamp": "", "comment": "...."}
+{"hash code": "", "timestamp": "", "comment": "...."}
+```
+hash code.zip
+hash code.zip
+hash code.zip
+
