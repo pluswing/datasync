@@ -27,3 +27,10 @@ type SettingType struct {
 	Target TargetType
 	Upload UploadType
 }
+
+// ---------------------
+type VersionType struct {
+	Hash    string
+	Time    int64
+	Comment string
+}

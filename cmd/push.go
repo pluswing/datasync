@@ -6,14 +6,18 @@ package cmd
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/aliakseiz/go-mysqldump"
 	"github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
@@ -51,9 +55,48 @@ to quickly create a Cobra application.`,
 			var gcsConf data.UploadGcsType
 			err = mapstructure.Decode(setting.Upload.Config, &gcsConf)
 			cobra.CheckErr(err)
-			uploadGoogleStorage(zipFile, gcsConf)
+
+			_uuid, err := uuid.NewRandom()
+			cobra.CheckErr(err)
+			uuidStr := _uuid.String()
+			uuidStr = strings.Replace(uuidStr, "-", "", -1)
+
+			uploadGcs(zipFile, fmt.Sprintf("%s.zip", uuidStr), gcsConf)
 
 			fmt.Println("DONE upload")
+
+			now := time.Now()
+
+			v := data.VersionType{
+				Hash:    uuidStr,
+				Time:    now.Unix(),
+				Comment: "comment",
+			}
+			b, err := json.Marshal(v)
+			cobra.CheckErr(err)
+			version := string(b)
+
+			if existsGcs(".datasync", gcsConf) {
+				filePath := downloadGcs(".datasync", gcsConf)
+				f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
+				cobra.CheckErr(err)
+				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+				cobra.CheckErr(err)
+				err = f.Close()
+				cobra.CheckErr(err)
+				uploadGcs(filePath, ".datasync", gcsConf)
+			} else {
+				tmpDir, err := os.MkdirTemp("", ".datasync")
+				cobra.CheckErr(err)
+				tmpFile := filepath.Join(tmpDir, ".datasync")
+				f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
+				cobra.CheckErr(err)
+				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+				cobra.CheckErr(err)
+				err = f.Close()
+				cobra.CheckErr(err)
+				uploadGcs(tmpFile, ".datasync", gcsConf)
+			}
 		}
 	},
 }
@@ -98,7 +141,7 @@ func processMysqldump(dumpDir string, cfg data.TargetMysqlType) {
 	dumper.Close()
 }
 
-func uploadGoogleStorage(target string, conf data.UploadGcsType) {
+func uploadGcs(target string, fileName string, conf data.UploadGcsType) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	cobra.CheckErr(err)
@@ -112,9 +155,9 @@ func uploadGoogleStorage(target string, conf data.UploadGcsType) {
 	// defer cancel()
 	var uploadPath = ""
 	if conf.Dir == "" {
-		uploadPath = "upload.zip"
+		uploadPath = fileName
 	} else {
-		uploadPath = filepath.Join(conf.Dir, "upload.zip")
+		uploadPath = filepath.Join(conf.Dir, fileName)
 	}
 
 	o := client.Bucket(conf.Bucket).Object(uploadPath)
@@ -127,4 +170,59 @@ func uploadGoogleStorage(target string, conf data.UploadGcsType) {
 
 	err = wc.Close()
 	cobra.CheckErr(err)
+}
+
+func downloadGcs(target string, conf data.UploadGcsType) string {
+	// TODO client は一度作ったものを使い回す。
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	cobra.CheckErr(err)
+	defer client.Close()
+
+	var filePath = ""
+	if conf.Dir == "" {
+		filePath = target
+	} else {
+		filePath = filepath.Join(conf.Dir, target)
+	}
+
+	o := client.Bucket(conf.Bucket).Object(filePath)
+
+	tmpDir, err := os.MkdirTemp("", ".datasync")
+	cobra.CheckErr(err)
+
+	tmpFile := filepath.Join(tmpDir, target)
+	f, err := os.Open(tmpFile)
+	cobra.CheckErr(err)
+	defer f.Close()
+
+	rc, err := o.NewReader(ctx)
+	cobra.CheckErr(err)
+	defer rc.Close()
+
+	_, err = io.Copy(f, rc)
+	cobra.CheckErr(err)
+
+	return tmpFile
+}
+
+func existsGcs(target string, conf data.UploadGcsType) bool {
+	// TODO client は一度作ったものを使い回す。
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	cobra.CheckErr(err)
+	defer client.Close()
+
+	var filePath = ""
+	if conf.Dir == "" {
+		filePath = target
+	} else {
+		filePath = filepath.Join(conf.Dir, target)
+	}
+
+	o := client.Bucket(conf.Bucket).Object(filePath)
+
+	attrs, _ := o.Attrs(ctx)
+
+	return attrs != nil
 }
