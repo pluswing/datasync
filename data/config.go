@@ -30,7 +30,7 @@ type SettingType struct {
 
 // ---------------------
 type VersionType struct {
-	Hash    string
-	Time    int64
-	Comment string
+	Id      string `json:"id"`
+	Time    int64  `json:"time"`
+	Message string `json:"message"`
 }
