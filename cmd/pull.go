@@ -1,6 +1,5 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -9,6 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+var id string
 
 // pullCmd represents the pull command
 var pullCmd = &cobra.Command{
@@ -22,19 +23,29 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("pull called")
+
+		// idがあるかどうか。
+
+		// ある場合  => id変数をみる
+		// ない場合  => .datasync_version
+
+		// 指定のバージョンをダウンロード
+		// storage.Download()
+
+		// 展開する => tmp
+		// compress.Decompress()
+
+		// 展開したものを適用する
+		// mysql  -> mysql.Import()
+		// file   -> copy
+
+		// .datasync_versionを書き換える。
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(pullCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// pullCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// pullCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// TODO あとでなおす。
+	pullCmd.Flags().StringVar(&id, "id", "", "version hash id")
 }
