@@ -6,9 +6,11 @@ require (
 	cloud.google.com/go/storage v1.30.1
 	github.com/aliakseiz/go-mysqldump v1.0.2
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/google/uuid v1.3.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0
+	github.com/tanimutomo/sqlfile v1.0.0
 )
 
 require (
@@ -21,7 +23,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
-	github.com/google/uuid v1.3.1 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.1 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

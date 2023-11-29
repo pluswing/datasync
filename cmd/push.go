@@ -102,6 +102,6 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(pushCmd)
 
-	pushCmd.PersistentFlags().StringVarP(&message, "message", "m", "", "commit mesasge")
+	pushCmd.Flags().StringVarP(&message, "message", "m", "", "commit mesasge")
 	pushCmd.MarkPersistentFlagRequired("message")
 }
