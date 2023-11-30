@@ -13,19 +13,19 @@ type TargetType struct {
 	Config interface{}
 }
 
-type UploadGcsType struct {
+type StorageGcsType struct {
 	Bucket string
 	Dir    string
 }
 
-type UploadType struct {
+type StorageType struct {
 	Kind   string
 	Config interface{}
 }
 
 type SettingType struct {
-	Target TargetType
-	Upload UploadType
+	Target  TargetType
+	Storage StorageType
 }
 
 // ---------------------
@@ -33,4 +33,20 @@ type VersionType struct {
 	Id      string `json:"id"`
 	Time    int64  `json:"time"`
 	Message string `json:"message"`
+}
+
+// ---------------------
+// target funcs
+type TargetMysqlFunc func(config TargetMysqlType)
+
+type TargetFuncTable struct {
+	Mysql TargetMysqlFunc
+}
+
+// ---------------------
+// storage funcs
+type StorageGcsFunc func(config StorageGcsType)
+
+type StorageFuncTable struct {
+	Gcs StorageGcsFunc
 }

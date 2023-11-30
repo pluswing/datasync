@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
 	"github.com/pluswing/datasync/dump"
@@ -35,67 +34,65 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("push called", setting)
 
-		if setting.Target.Kind == "mysql" {
-			var conf data.TargetMysqlType
-			err := mapstructure.Decode(setting.Target.Config, &conf)
-			cobra.CheckErr(err)
+		dumpDir, err := os.MkdirTemp("", ".datasync")
+		cobra.CheckErr(err)
 
-			dumpDir, err := os.MkdirTemp("", ".datasync")
-			cobra.CheckErr(err)
+		data.DispatchTarget(setting.Target, data.TargetFuncTable{
+			Mysql: func(conf data.TargetMysqlType) {
+				dump.Dump(dumpDir, conf)
+			},
+		})
 
-			// dbダンプ ...
-			dump.Dump(dumpDir, conf)
+		// zip圧縮
+		zipFile := compress.Compress(dumpDir)
 
-			// zip圧縮
-			zipFile := compress.Compress(dumpDir)
+		_uuid, err := uuid.NewRandom()
+		cobra.CheckErr(err)
+		uuidStr := _uuid.String()
+		uuidStr = strings.Replace(uuidStr, "-", "", -1)
 
-			// アップロード
-			var gcsConf data.UploadGcsType
-			err = mapstructure.Decode(setting.Upload.Config, &gcsConf)
-			cobra.CheckErr(err)
+		data.DispatchStorage(setting.Storage, data.StorageFuncTable{
+			Gcs: func(conf data.StorageGcsType) {
+				// アップロード
+				storage.Upload(zipFile, fmt.Sprintf("%s.zip", uuidStr), conf)
 
-			_uuid, err := uuid.NewRandom()
-			cobra.CheckErr(err)
-			uuidStr := _uuid.String()
-			uuidStr = strings.Replace(uuidStr, "-", "", -1)
+				fmt.Println("DONE upload")
 
-			storage.Upload(zipFile, fmt.Sprintf("%s.zip", uuidStr), gcsConf)
+				now := time.Now()
 
-			fmt.Println("DONE upload")
-
-			now := time.Now()
-
-			v := data.VersionType{
-				Id:      uuidStr,
-				Time:    now.Unix(),
-				Message: message,
-			}
-			b, err := json.Marshal(v)
-			cobra.CheckErr(err)
-			version := string(b)
-
-			if storage.Exists(".datasync", gcsConf) {
-				filePath := storage.Download(".datasync", gcsConf)
-				f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
+				v := data.VersionType{
+					Id:      uuidStr,
+					Time:    now.Unix(),
+					Message: message,
+				}
+				b, err := json.Marshal(v)
 				cobra.CheckErr(err)
-				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
-				cobra.CheckErr(err)
-				err = f.Close()
-				cobra.CheckErr(err)
-				storage.Upload(filePath, ".datasync", gcsConf)
-			} else {
-				tmpDir, err := os.MkdirTemp("", ".datasync")
-				cobra.CheckErr(err)
-				tmpFile := filepath.Join(tmpDir, ".datasync")
-				f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
-				cobra.CheckErr(err)
-				_, err = f.WriteString(fmt.Sprintf("%s\n", version))
-				cobra.CheckErr(err)
-				err = f.Close()
-				cobra.CheckErr(err)
-				storage.Upload(tmpFile, ".datasync", gcsConf)
-			}
-		}
+				version := string(b)
+
+				// TODO 抽象化
+				if storage.Exists(".datasync", conf) {
+					filePath := storage.Download(".datasync", conf)
+					f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
+					cobra.CheckErr(err)
+					_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+					cobra.CheckErr(err)
+					err = f.Close()
+					cobra.CheckErr(err)
+					storage.Upload(filePath, ".datasync", conf)
+				} else {
+					tmpDir, err := os.MkdirTemp("", ".datasync")
+					cobra.CheckErr(err)
+					tmpFile := filepath.Join(tmpDir, ".datasync")
+					f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
+					cobra.CheckErr(err)
+					_, err = f.WriteString(fmt.Sprintf("%s\n", version))
+					cobra.CheckErr(err)
+					err = f.Close()
+					cobra.CheckErr(err)
+					storage.Upload(tmpFile, ".datasync", conf)
+				}
+			},
+		})
 	},
 }
 

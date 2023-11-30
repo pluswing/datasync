@@ -6,9 +6,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/mitchellh/mapstructure"
-	"github.com/pluswing/datasync/data"
-	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -30,20 +27,20 @@ to quickly create a Cobra application.`,
 		fmt.Println(args)
 
 		// idがあるかどうか。
-		var versionId = ""
-		if len(args) == 1 {
-			versionId = args[0]
-		} else {
-			versionId = "" // TODO read .datasync_version
-		}
+		// var versionId = ""
+		// if len(args) == 1 {
+		// 	versionId = args[0]
+		// } else {
+		// 	versionId = "" // TODO read .datasync_version
+		// }
 
 		// 指定のバージョンをダウンロード
-		if setting.Upload.Kind == "gcs" {
-			var gcsConf data.UploadGcsType
-			err := mapstructure.Decode(setting.Upload.Config, &gcsConf)
-			cobra.CheckErr(err)
-			tmpFile := storage.Download(fmt.Sprintf("%s.zip", versionId), gcsConf)
-		}
+		// if setting.Upload.Kind == "gcs" {
+		// 	var gcsConf data.UploadGcsType
+		// 	err := mapstructure.Decode(setting.Upload.Config, &gcsConf)
+		// 	cobra.CheckErr(err)
+		// 	tmpFile := storage.Download(fmt.Sprintf("%s.zip", versionId), gcsConf)
+		// }
 		// storage.Download()
 
 		// 展開する => tmp

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Upload(target string, fileName string, conf data.UploadGcsType) {
+func Upload(target string, fileName string, conf data.StorageGcsType) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	cobra.CheckErr(err)
@@ -42,7 +42,7 @@ func Upload(target string, fileName string, conf data.UploadGcsType) {
 	cobra.CheckErr(err)
 }
 
-func Download(target string, conf data.UploadGcsType) string {
+func Download(target string, conf data.StorageGcsType) string {
 	// TODO client は一度作ったものを使い回す。
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -76,7 +76,7 @@ func Download(target string, conf data.UploadGcsType) string {
 	return tmpFile
 }
 
-func Exists(target string, conf data.UploadGcsType) bool {
+func Exists(target string, conf data.StorageGcsType) bool {
 	// TODO client は一度作ったものを使い回す。
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)

@@ -6,7 +6,7 @@ target:
     user: root
     password: root
     database: sample
-upload:
+storage:
   kind: gcs
   config:
     bucket: datasync000001
