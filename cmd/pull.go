@@ -5,11 +5,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
+	"github.com/pluswing/datasync/compress"
+	"github.com/pluswing/datasync/data"
+	"github.com/pluswing/datasync/dump"
+	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
 )
-
-var id string
 
 // pullCmd represents the pull command
 var pullCmd = &cobra.Command{
@@ -23,34 +27,52 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Args: cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("pull called")
-		fmt.Println(args)
 
 		// idがあるかどうか。
-		// var versionId = ""
-		// if len(args) == 1 {
-		// 	versionId = args[0]
-		// } else {
-		// 	versionId = "" // TODO read .datasync_version
-		// }
+		var versionId = ""
+		if len(args) == 1 {
+			// TODO 先頭6文字くらいでもいけるようにする(git like)
+			versionId = args[0]
+		} else {
+			// TODO .datasync_versionがない場合の考慮
+			f, err := os.Open(".datasync_version")
+			cobra.CheckErr(err)
+			data := make([]byte, 1024)
+			_, err = f.Read(data)
+			cobra.CheckErr(err)
+			versionId = strings.Replace(string(data), "\n", "", -1)
+			err = f.Close()
+			cobra.CheckErr(err)
+		}
 
 		// 指定のバージョンをダウンロード
-		// if setting.Upload.Kind == "gcs" {
-		// 	var gcsConf data.UploadGcsType
-		// 	err := mapstructure.Decode(setting.Upload.Config, &gcsConf)
-		// 	cobra.CheckErr(err)
-		// 	tmpFile := storage.Download(fmt.Sprintf("%s.zip", versionId), gcsConf)
-		// }
-		// storage.Download()
+		var tmpFile string
+		data.DispatchStorage(setting.Storage, data.StorageFuncTable{
+			Gcs: func(config data.StorageGcsType) {
+				tmpFile = storage.Download(fmt.Sprintf("%s.zip", versionId), config)
+			},
+		})
+
+		tmpDir, err := os.MkdirTemp("", ".datasync")
+		cobra.CheckErr(err)
 
 		// 展開する => tmp
-		// compress.Decompress(tmpFile)
+		compress.Decompress(tmpDir, tmpFile)
 
 		// 展開したものを適用する
-		// mysql  -> mysql.Import()
-		// file   -> copy
+		data.DispatchTarget(setting.Target, data.TargetFuncTable{
+			Mysql: func(config data.TargetMysqlType) {
+				dump.Import(tmpDir, config)
+			},
+		})
 
 		// .datasync_versionを書き換える。
+		f, err := os.Open(".datasync_version")
+		cobra.CheckErr(err)
+		defer f.Close()
+		f.WriteString(versionId)
+
+		fmt.Printf("pull Succeeded. version_id = %s\n", versionId)
 	},
 }
 
