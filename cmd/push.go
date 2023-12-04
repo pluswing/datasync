@@ -15,6 +15,7 @@ import (
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
 	"github.com/pluswing/datasync/dump"
+	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
 )
@@ -32,8 +33,9 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dumpDir, err := os.MkdirTemp("", ".datasync")
+		dumpDir, err := file.MakeTempFile()
 		cobra.CheckErr(err)
+		defer os.RemoveAll(dumpDir)
 
 		data.DispatchTarget(setting.Target, data.TargetFuncTable{
 			Mysql: func(conf data.TargetMysqlType) {
@@ -76,8 +78,10 @@ to quickly create a Cobra application.`,
 					cobra.CheckErr(err)
 					storage.Upload(filePath, ".datasync", conf)
 				} else {
-					tmpDir, err := os.MkdirTemp("", ".datasync")
+					tmpDir, err := file.MakeTempFile()
 					cobra.CheckErr(err)
+					defer os.RemoveAll(tmpDir)
+
 					tmpFile := filepath.Join(tmpDir, ".datasync")
 					f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
 					cobra.CheckErr(err)
@@ -97,5 +101,5 @@ func init() {
 	rootCmd.AddCommand(pushCmd)
 
 	pushCmd.Flags().StringVarP(&message, "message", "m", "", "commit mesasge")
-	pushCmd.MarkPersistentFlagRequired("message")
+	pushCmd.MarkFlagRequired("message")
 }

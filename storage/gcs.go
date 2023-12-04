@@ -8,6 +8,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/pluswing/datasync/data"
+	"github.com/pluswing/datasync/file"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +59,7 @@ func Download(target string, conf data.StorageGcsType) string {
 
 	o := client.Bucket(conf.Bucket).Object(filePath)
 
-	tmpDir, err := os.MkdirTemp("", ".datasync")
+	tmpDir, err := file.MakeTempFile()
 	cobra.CheckErr(err)
 
 	tmpFile := filepath.Join(tmpDir, target)
@@ -73,6 +74,7 @@ func Download(target string, conf data.StorageGcsType) string {
 	_, err = io.Copy(f, rc)
 	cobra.CheckErr(err)
 
+	// TODO tmpFileを消す処理を忘れずに。
 	return tmpFile
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
 	"github.com/pluswing/datasync/dump"
+	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
 )
@@ -35,14 +36,9 @@ to quickly create a Cobra application.`,
 			versionId = args[0]
 		} else {
 			// TODO .datasync_versionがない場合の考慮
-			f, err := os.Open(".datasync_version")
-			cobra.CheckErr(err)
-			data := make([]byte, 1024)
-			_, err = f.Read(data)
+			data, err := os.ReadFile(".datasync_version")
 			cobra.CheckErr(err)
 			versionId = strings.Replace(string(data), "\n", "", -1)
-			err = f.Close()
-			cobra.CheckErr(err)
 		}
 
 		// 指定のバージョンをダウンロード
@@ -53,8 +49,9 @@ to quickly create a Cobra application.`,
 			},
 		})
 
-		tmpDir, err := os.MkdirTemp("", ".datasync")
+		tmpDir, err := file.MakeTempFile()
 		cobra.CheckErr(err)
+		defer os.RemoveAll(tmpDir)
 
 		// 展開する => tmp
 		compress.Decompress(tmpDir, tmpFile)
@@ -67,10 +64,8 @@ to quickly create a Cobra application.`,
 		})
 
 		// .datasync_versionを書き換える。
-		f, err := os.Open(".datasync_version")
+		err = os.WriteFile(".datasync_version", []byte(versionId), 0644)
 		cobra.CheckErr(err)
-		defer f.Close()
-		f.WriteString(versionId)
 
 		fmt.Printf("pull Succeeded. version_id = %s\n", versionId)
 	},
