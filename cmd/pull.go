@@ -49,7 +49,7 @@ to quickly create a Cobra application.`,
 			},
 		})
 
-		tmpDir, err := file.MakeTempFile()
+		tmpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
 		defer os.RemoveAll(tmpDir)
 

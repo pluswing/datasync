@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pluswing/datasync/data"
 	"github.com/pluswing/datasync/storage"
@@ -34,16 +35,21 @@ to quickly create a Cobra application.`,
 		})
 
 		// 読み込む
-		data, err := os.ReadFile(tmpFile)
+		content, err := os.ReadFile(tmpFile)
 		cobra.CheckErr(err)
-		fmt.Println(string(data))
-		lines := strings.Split(string(data), "\n")
+		lines := strings.Split(string(content), "\n")
 		var ver data.VersionType
 		for _, line := range lines {
+			if line == "" {
+				continue
+			}
 			err := json.Unmarshal([]byte(line), &ver)
 			cobra.CheckErr(err)
-			// いい感じに出力。
-			fmt.Printf("")
+			// TODO 出力方法を工夫する
+			//  --oneline
+			//  デフォルトは git log 的な出力。
+			d := time.Unix(ver.Time, 0).Format("2006-01-02 15:04:05")
+			fmt.Printf("%s %s %s\n", ver.Id, d, ver.Message)
 		}
 	},
 }

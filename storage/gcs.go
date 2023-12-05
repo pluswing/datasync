@@ -59,7 +59,7 @@ func Download(target string, conf data.StorageGcsType) string {
 
 	o := client.Bucket(conf.Bucket).Object(filePath)
 
-	tmpDir, err := file.MakeTempFile()
+	tmpDir, err := file.MakeTempDir()
 	cobra.CheckErr(err)
 
 	tmpFile := filepath.Join(tmpDir, target)
