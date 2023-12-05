@@ -2,8 +2,8 @@ name: test
 
 on:
   push:
-    branches:
-      - act/test
+    tags:
+      - 'v*'
 
 jobs:
   release:
@@ -31,12 +31,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # tag_name: ${{ github.ref }}
-          # release_name: Release ${{ github.ref }}
-          # draft: false
-          # prerelease: false
-          tag_name: v0.0.0
-          release_name: Release v0.0.0 (test)
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
           draft: true
           prerelease: true
 
