@@ -24,7 +24,7 @@ func MakeTempDir() (string, error) {
 	return os.MkdirTemp("", ".datasync")
 }
 
-func findCurrentDir() (string, error) {
+func FindCurrentDir() (string, error) {
 	p, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -48,7 +48,7 @@ func searchFile(dir string, filename string) (string, error) {
 }
 
 func ReadVersionFile() (string, error) {
-	dir, err := findCurrentDir()
+	dir, err := FindCurrentDir()
 	file := filepath.Join(dir, VERSION_FILE)
 	if err != nil {
 		return "", err
@@ -61,7 +61,7 @@ func ReadVersionFile() (string, error) {
 }
 
 func UpdateVersionFile(versionId string) error {
-	dir, err := findCurrentDir()
+	dir, err := FindCurrentDir()
 	file := filepath.Join(dir, VERSION_FILE)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func UpdateVersionFile(versionId string) error {
 }
 
 func DataDir() (string, error) {
-	dir, err := findCurrentDir()
+	dir, err := FindCurrentDir()
 	if err != nil {
 		return "", err
 	}

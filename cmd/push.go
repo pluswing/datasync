@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
-	"github.com/pluswing/datasync/dump"
+	"github.com/pluswing/datasync/dump/dump_mysql"
 	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
@@ -37,9 +37,9 @@ to quickly create a Cobra application.`,
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)
 
-		data.DispatchTarget(setting.Target, data.TargetFuncTable{
+		data.DispatchTarget(setting.Targets[0], data.TargetFuncTable{
 			Mysql: func(conf data.TargetMysqlType) {
-				dump.Dump(dumpDir, conf)
+				dump_mysql.Dump(dumpDir, conf)
 			},
 		})
 

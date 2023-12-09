@@ -8,6 +8,10 @@ type TargetMysqlType struct {
 	Database string
 }
 
+type TargetFileType struct {
+	Path string
+}
+
 type TargetType struct {
 	Kind   string
 	Config interface{}
@@ -24,7 +28,7 @@ type StorageType struct {
 }
 
 type SettingType struct {
-	Target  TargetType
+	Targets []TargetType
 	Storage StorageType
 }
 
@@ -38,9 +42,11 @@ type VersionType struct {
 // ---------------------
 // target funcs
 type TargetMysqlFunc func(config TargetMysqlType)
+type TargetFileFunc func(config TargetFileType)
 
 type TargetFuncTable struct {
 	Mysql TargetMysqlFunc
+	File  TargetFileFunc
 }
 
 // ---------------------

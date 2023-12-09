@@ -1,4 +1,4 @@
-package dump
+package dump_mysql
 
 import (
 	"database/sql"
