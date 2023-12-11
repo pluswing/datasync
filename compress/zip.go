@@ -60,7 +60,7 @@ func addZipFiles(writer *zip.Writer, basePath, pathInZip string) error {
 		newPathInZip := pathInZip + fileInfo.Name()
 
 		if fileInfo.IsDir() {
-			addDirectory(writer, newBasePath)
+			addDirectory(writer, newBasePath, newPathInZip)
 
 			newBasePath = newBasePath + string(os.PathSeparator)
 			newPathInZip = newPathInZip + string(os.PathSeparator)
@@ -94,12 +94,14 @@ func addZipFile(writer *zip.Writer, targetFilePath, pathInZip string) {
 	cobra.CheckErr(err)
 }
 
-func addDirectory(writer *zip.Writer, basePath string) {
+func addDirectory(writer *zip.Writer, basePath string, pathInZip string) {
 	fileInfo, err := os.Lstat(basePath)
 	cobra.CheckErr(err)
 
 	header, err := zip.FileInfoHeader(fileInfo)
 	cobra.CheckErr(err)
+
+	header.Name = pathInZip
 
 	_, err = writer.CreateHeader(header)
 	cobra.CheckErr(err)

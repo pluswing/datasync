@@ -41,7 +41,7 @@ func searchFile(dir string, filename string) (string, error) {
 	}
 	p := filepath.Join(dir, filename)
 	_, err := os.Stat(p)
-	if err == nil {
+	if err != nil {
 		return searchFile(filepath.Dir(dir), filename)
 	}
 	return dir, nil

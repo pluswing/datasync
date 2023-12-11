@@ -15,6 +15,12 @@ func DispatchTarget(target TargetType, table TargetFuncTable) {
 		// TODO エラーハンドリング
 		cobra.CheckErr(err)
 		table.Mysql(conf)
+	case "file":
+		var conf TargetFileType
+		err := mapstructure.Decode(target.Config, &conf)
+		// TODO エラーハンドリング
+		cobra.CheckErr(err)
+		table.File(conf)
 	default:
 		panic(fmt.Sprintf("invalid target.kind = %s\n", target.Kind))
 	}

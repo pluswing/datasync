@@ -10,6 +10,7 @@ import (
 
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
+	"github.com/pluswing/datasync/dump/dump_file"
 	"github.com/pluswing/datasync/dump/dump_mysql"
 	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
@@ -57,11 +58,16 @@ to quickly create a Cobra application.`,
 		compress.Decompress(tmpDir, tmpFile)
 
 		// 展開したものを適用する
-		data.DispatchTarget(setting.Targets[0], data.TargetFuncTable{
-			Mysql: func(config data.TargetMysqlType) {
-				dump_mysql.Import(tmpDir, config)
-			},
-		})
+		for _, target := range setting.Targets {
+			data.DispatchTarget(target, data.TargetFuncTable{
+				Mysql: func(config data.TargetMysqlType) {
+					dump_mysql.Import(tmpDir, config)
+				},
+				File: func(config data.TargetFileType) {
+					dump_file.Expand(tmpDir, config)
+				},
+			})
+		}
 
 		// .datasync_versionを書き換える。
 		err = os.WriteFile(".datasync_version", []byte(versionId), 0644)

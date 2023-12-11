@@ -9,6 +9,9 @@ targets:
   - kind: file
     config:
       path: "./cmd"
+  - kind: file
+    config:
+      path: "./dump/dump_mysql"
 
 storage:
   kind: gcs

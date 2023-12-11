@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
+	"github.com/pluswing/datasync/dump/dump_file"
 	"github.com/pluswing/datasync/dump/dump_mysql"
 	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
@@ -37,11 +38,16 @@ to quickly create a Cobra application.`,
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)
 
-		data.DispatchTarget(setting.Targets[0], data.TargetFuncTable{
-			Mysql: func(conf data.TargetMysqlType) {
-				dump_mysql.Dump(dumpDir, conf)
-			},
-		})
+		for _, target := range setting.Targets {
+			data.DispatchTarget(target, data.TargetFuncTable{
+				Mysql: func(conf data.TargetMysqlType) {
+					dump_mysql.Dump(dumpDir, conf)
+				},
+				File: func(conf data.TargetFileType) {
+					dump_file.Dump(dumpDir, conf)
+				},
+			})
+		}
 
 		// zip圧縮
 		zipFile := compress.Compress(dumpDir)
@@ -93,6 +99,7 @@ to quickly create a Cobra application.`,
 				}
 			},
 		})
+		// TODO ..datasync_version書き換え
 		fmt.Printf("push Succeeded. version_id = %s\n", versionId)
 	},
 }
