@@ -1,12 +1,16 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"fmt"
+	"os"
 
+	"github.com/pluswing/datasync/compress"
+	"github.com/pluswing/datasync/data"
+	"github.com/pluswing/datasync/dump/dump_file"
+	"github.com/pluswing/datasync/dump/dump_mysql"
+	"github.com/pluswing/datasync/file"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +25,32 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("apply called")
+
+		// file := ""
+
+		tmpDir, err := file.MakeTempDir()
+		cobra.CheckErr(err)
+		defer os.RemoveAll(tmpDir)
+
+		// 展開する => tmp
+		compress.Decompress(tmpDir, tmpFile)
+
+		// 展開したものを適用する
+		for _, target := range setting.Targets {
+			data.DispatchTarget(target, data.TargetFuncTable{
+				Mysql: func(config data.TargetMysqlType) {
+					dump_mysql.Import(tmpDir, config)
+				},
+				File: func(config data.TargetFileType) {
+					dump_file.Expand(tmpDir, config)
+				},
+			})
+		}
+
+		// .datasync_versionを書き換える。
+		err = os.WriteFile(".datasync_version", []byte(versionId), 0644)
+		cobra.CheckErr(err)
+
 	},
 }
 

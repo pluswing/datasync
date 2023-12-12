@@ -14,7 +14,6 @@ import (
 const VERSION_FILE = ".datasync_version"
 const HISTORY_FILE = ".datasync"
 const DATADIR = ".datasync"
-const PERMISSION = 0644
 
 func configFiles() []string {
 	return []string{"datasync.yaml", "datasync.yml"}
@@ -77,12 +76,10 @@ func DataDir() (string, error) {
 	d := filepath.Join(dir, DATADIR)
 	s, err := os.Stat(d)
 	if err != nil {
-		os.Mkdir(d, PERMISSION)
-	}
-	if s.IsDir() {
+		os.Mkdir(d, os.ModePerm)
+	} else if !s.IsDir() {
 		return "", fmt.Errorf("datadir is file")
 	}
-
 	return d, nil
 }
 
@@ -109,11 +106,11 @@ func readFile(file string) (string, error) {
 }
 
 func writeFile(file string, data string) error {
-	return os.WriteFile(file, []byte(data), PERMISSION)
+	return os.WriteFile(file, []byte(data), os.ModePerm)
 }
 
 func appendFile(file string, data string) error {
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, PERMISSION)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}
