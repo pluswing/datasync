@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
@@ -16,7 +17,7 @@ import (
 
 // applyCmd represents the apply command
 var applyCmd = &cobra.Command{
-	Use:   "apply",
+	Use:   "apply [flags] [version_id]",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -24,9 +25,24 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
+	Args: cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// file := ""
+		var versionId = ""
+		if len(args) == 1 {
+			// TODO 先頭6文字くらいでもいけるようにする(git like)
+			versionId = args[0]
+		} else {
+			var err error = nil
+			versionId, err = file.ReadVersionFile()
+			cobra.CheckErr(err)
+		}
+
+		dataDir, err := file.DataDir()
+		cobra.CheckErr(err)
+		tmpFile := filepath.Join(dataDir, versionId+".zip")
+
+		// TODO tmpFileがあるかどうか => .datasync-localを見る。
 
 		tmpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
@@ -47,10 +63,8 @@ to quickly create a Cobra application.`,
 			})
 		}
 
-		// .datasync_versionを書き換える。
-		err = os.WriteFile(".datasync_version", []byte(versionId), 0644)
+		err = file.UpdateVersionFile(versionId)
 		cobra.CheckErr(err)
-
 	},
 }
 

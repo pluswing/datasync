@@ -83,12 +83,12 @@ func DataDir() (string, error) {
 	return d, nil
 }
 
-func AddHistoryFile(dir string, newVersion data.VersionType) error {
+func AddHistoryFile(dir string, suffix string, newVersion data.VersionType) error {
 	b, err := json.Marshal(newVersion)
 	cobra.CheckErr(err)
 	newLine := fmt.Sprintf("%s\n", string(b))
 
-	file := filepath.Join(dir, HISTORY_FILE)
+	file := filepath.Join(dir, HISTORY_FILE+suffix)
 	_, err = os.Stat(file)
 	if err != nil {
 		writeFile(file, newLine)

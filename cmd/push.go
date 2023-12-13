@@ -4,12 +4,9 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/pluswing/datasync/compress"
@@ -20,8 +17,6 @@ import (
 	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
 )
-
-var message string
 
 // pushCmd represents the push command
 var pushCmd = &cobra.Command{
@@ -61,42 +56,6 @@ to quickly create a Cobra application.`,
 			Gcs: func(conf data.StorageGcsType) {
 				// アップロード
 				storage.Upload(zipFile, fmt.Sprintf("%s.zip", versionId), conf)
-
-				now := time.Now()
-
-				v := data.VersionType{
-					Id:      versionId,
-					Time:    now.Unix(),
-					Message: message,
-				}
-				b, err := json.Marshal(v)
-				cobra.CheckErr(err)
-				version := string(b)
-
-				// TODO 抽象化
-				if storage.Exists(".datasync", conf) {
-					filePath := storage.Download(".datasync", conf)
-					f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
-					cobra.CheckErr(err)
-					_, err = f.WriteString(fmt.Sprintf("%s\n", version))
-					cobra.CheckErr(err)
-					err = f.Close()
-					cobra.CheckErr(err)
-					storage.Upload(filePath, ".datasync", conf)
-				} else {
-					tmpDir, err := file.MakeTempDir()
-					cobra.CheckErr(err)
-					defer os.RemoveAll(tmpDir)
-
-					tmpFile := filepath.Join(tmpDir, ".datasync")
-					f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY, 0644)
-					cobra.CheckErr(err)
-					_, err = f.WriteString(fmt.Sprintf("%s\n", version))
-					cobra.CheckErr(err)
-					err = f.Close()
-					cobra.CheckErr(err)
-					storage.Upload(tmpFile, ".datasync", conf)
-				}
 			},
 		})
 		// TODO ..datasync_version書き換え
@@ -106,7 +65,4 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(pushCmd)
-
-	pushCmd.Flags().StringVarP(&message, "message", "m", "", "commit mesasge")
-	pushCmd.MarkFlagRequired("message")
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pluswing/datasync/compress"
@@ -57,19 +58,28 @@ to quickly create a Cobra application.`,
 		// .datasyncに移動
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
-		file := filepath.Join(dir, fmt.Sprintf("%s.zip", versionId))
-		err = os.Rename(zipFile, file)
+		dest := filepath.Join(dir, fmt.Sprintf("%s.zip", versionId))
+		err = os.Rename(zipFile, dest)
 		cobra.CheckErr(err)
 
 		// .datasync/.datasync-local この中がローカルの奴ら。
 		// .datasync/.datasync(-remote) これがリモートのやつ。
 		// messageを使う。
+
+		newVersion := data.VersionType{
+			Id:      versionId,
+			Time:    time.Now().Unix(),
+			Message: message,
+		}
+
+		file.AddHistoryFile(dir, "-local", newVersion)
+		file.UpdateVersionFile(versionId)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(dumpCmd)
 
-	pushCmd.Flags().StringVarP(&message, "message", "m", "", "commit mesasge")
-	pushCmd.MarkFlagRequired("message")
+	dumpCmd.Flags().StringVarP(&message, "message", "m", "", "commit mesasge")
+	dumpCmd.MarkFlagRequired("message")
 }
