@@ -6,12 +6,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 
-	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
-	"github.com/pluswing/datasync/dump/dump_file"
-	"github.com/pluswing/datasync/dump/dump_mysql"
 	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
@@ -36,42 +33,26 @@ to quickly create a Cobra application.`,
 			// TODO 先頭6文字くらいでもいけるようにする(git like)
 			versionId = args[0]
 		} else {
-			// TODO .datasync_versionがない場合の考慮
-			data, err := os.ReadFile(".datasync_version")
+			var err error
+			versionId, err = file.ReadVersionFile()
 			cobra.CheckErr(err)
-			versionId = strings.Replace(string(data), "\n", "", -1)
 		}
 
 		// 指定のバージョンをダウンロード
 		var tmpFile string
 		data.DispatchStorage(setting.Storage, data.StorageFuncTable{
 			Gcs: func(config data.StorageGcsType) {
-				tmpFile = storage.Download(fmt.Sprintf("%s.zip", versionId), config)
+				tmpFile = storage.Download(versionId+".zip", config)
 			},
 		})
 
-		tmpDir, err := file.MakeTempDir()
+		dir, err := file.DataDir()
 		cobra.CheckErr(err)
-		defer os.RemoveAll(tmpDir)
 
-		// 展開する => tmp
-		compress.Decompress(tmpDir, tmpFile)
-
-		// 展開したものを適用する
-		for _, target := range setting.Targets {
-			data.DispatchTarget(target, data.TargetFuncTable{
-				Mysql: func(config data.TargetMysqlType) {
-					dump_mysql.Import(tmpDir, config)
-				},
-				File: func(config data.TargetFileType) {
-					dump_file.Expand(tmpDir, config)
-				},
-			})
-		}
-
-		// .datasync_versionを書き換える。
-		err = os.WriteFile(".datasync_version", []byte(versionId), 0644)
+		err = os.Rename(tmpFile, filepath.Join(dir, versionId+".zip"))
 		cobra.CheckErr(err)
+
+		// TODO リモートの.datasyncを持ってくる
 
 		fmt.Printf("pull Succeeded. version_id = %s\n", versionId)
 	},

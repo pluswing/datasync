@@ -4,6 +4,7 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -65,6 +66,9 @@ to quickly create a Cobra application.`,
 
 		err = file.UpdateVersionFile(versionId)
 		cobra.CheckErr(err)
+
+		fmt.Printf("apply Succeeded. version_id = %s\n", versionId)
+
 	},
 }
 

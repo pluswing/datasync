@@ -4,15 +4,9 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"strings"
+	"path/filepath"
 
-	"github.com/google/uuid"
-	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
-	"github.com/pluswing/datasync/dump/dump_file"
-	"github.com/pluswing/datasync/dump/dump_mysql"
 	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
@@ -20,7 +14,7 @@ import (
 
 // pushCmd represents the push command
 var pushCmd = &cobra.Command{
-	Use:   "push",
+	Use:   "push pull [flags] [version_id ...]",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -28,38 +22,28 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
+	Args: cobra.MatchAll(cobra.MinimumNArgs(0), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		dumpDir, err := file.MakeTempDir()
-		cobra.CheckErr(err)
-		defer os.RemoveAll(dumpDir)
 
-		for _, target := range setting.Targets {
-			data.DispatchTarget(target, data.TargetFuncTable{
-				Mysql: func(conf data.TargetMysqlType) {
-					dump_mysql.Dump(dumpDir, conf)
-				},
-				File: func(conf data.TargetFileType) {
-					dump_file.Dump(dumpDir, conf)
-				},
-			})
+		dir, err := file.DataDir()
+		cobra.CheckErr(err)
+
+		// args == version_idの配列
+		target := make([]string, len(args))
+
+		for i, versionId := range args {
+			// TODO 先頭6文字くらいでもいけるようにする(git like)
+			target[i] = versionId
 		}
-
-		// zip圧縮
-		zipFile := compress.Compress(dumpDir)
-
-		_uuid, err := uuid.NewRandom()
-		cobra.CheckErr(err)
-		versionId := _uuid.String()
-		versionId = strings.Replace(versionId, "-", "", -1)
 
 		data.DispatchStorage(setting.Storage, data.StorageFuncTable{
 			Gcs: func(conf data.StorageGcsType) {
-				// アップロード
-				storage.Upload(zipFile, fmt.Sprintf("%s.zip", versionId), conf)
+				for _, versionId := range target {
+					storage.Upload(filepath.Join(dir, versionId+".zip"), versionId+".zip", conf)
+				}
+				// TODO .datasync-localのデータをリモートの.datasyncに同期する
 			},
 		})
-		// TODO ..datasync_version書き換え
-		fmt.Printf("push Succeeded. version_id = %s\n", versionId)
 	},
 }
 

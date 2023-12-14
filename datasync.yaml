@@ -9,9 +9,15 @@ targets:
   # - kind: file
   #   config:
   #     path: "./cmd"
+  # - kind: file
+  #   config:
+  #     path: "./dump/dump_mysql"
   - kind: file
     config:
-      path: "./dump/dump_mysql"
+      path: "./.vscode"
+  # - kind: file
+  #   config:
+  #     path: "./LICENSE" # TODO ファイルの対応が必要
 
 storage:
   kind: gcs
