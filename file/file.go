@@ -97,6 +97,26 @@ func AddHistoryFile(dir string, suffix string, newVersion data.VersionType) erro
 	return appendFile(file, newLine)
 }
 
+func ListHistory(suffix string) []data.VersionType {
+	dir, err := DataDir()
+	cobra.CheckErr(err)
+	file := filepath.Join(dir, HISTORY_FILE+suffix)
+	content, err := readFile(file)
+	cobra.CheckErr(err)
+	lines := strings.Split(content, "\n")
+	var list = make([]data.VersionType, 0)
+	var ver data.VersionType
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		err := json.Unmarshal([]byte(line), &ver)
+		cobra.CheckErr(err)
+		list = append(list, ver)
+	}
+	return list
+}
+
 func readFile(file string) (string, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {

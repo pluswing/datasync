@@ -4,13 +4,13 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/pluswing/datasync/data"
+	"github.com/pluswing/datasync/file"
 	"github.com/pluswing/datasync/storage"
 	"github.com/spf13/cobra"
 )
@@ -34,17 +34,16 @@ to quickly create a Cobra application.`,
 			},
 		})
 
-		// 読み込む
-		content, err := os.ReadFile(tmpFile)
+		dir, err := file.DataDir()
 		cobra.CheckErr(err)
-		lines := strings.Split(string(content), "\n")
-		var ver data.VersionType
-		for _, line := range lines {
-			if line == "" {
-				continue
-			}
-			err := json.Unmarshal([]byte(line), &ver)
-			cobra.CheckErr(err)
+
+		err = os.Rename(tmpFile, filepath.Join(dir, ".datasync"))
+		cobra.CheckErr(err)
+
+		// 読み込む
+		list := file.ListHistory("")
+
+		for _, ver := range list {
 			// TODO 出力方法を工夫する
 			//  --oneline
 			//  デフォルトは git log 的な出力。

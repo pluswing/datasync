@@ -43,7 +43,21 @@ to quickly create a Cobra application.`,
 		cobra.CheckErr(err)
 		tmpFile := filepath.Join(dataDir, versionId+".zip")
 
-		// TODO tmpFileがあるかどうか => .datasync-localを見る。
+		remoteList := file.ListHistory("")
+		localList := file.ListHistory("-local")
+		list := append(remoteList, localList...)
+		var found = false
+		for _, ver := range list {
+			if ver.Id == versionId {
+				found = true
+				break
+			}
+		}
+		if !found {
+			fmt.Println("invalid varsion id")
+			return
+		}
+		// TODO tmpFileがあるかどうか
 
 		tmpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
