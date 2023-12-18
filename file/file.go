@@ -142,7 +142,7 @@ func FindVersion(versionId string) (data.VersionType, error) {
 		return remoteVersion, nil
 	}
 	localVersion, err := findVersion(versionId, "-local")
-	if err != nil {
+	if err == nil {
 		return localVersion, nil
 	}
 	return data.VersionType{}, fmt.Errorf("version not found")
@@ -174,7 +174,7 @@ func versionListToString(list []data.VersionType) string {
 	for _, ver := range list {
 		line, err := versionToString(ver)
 		cobra.CheckErr(err)
-		str += line + "\n"
+		str += line
 	}
 	return str
 }
