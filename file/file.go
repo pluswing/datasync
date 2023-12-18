@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/pluswing/datasync/data"
@@ -46,17 +47,17 @@ func searchFile(dir string, filename string) (string, error) {
 	return dir, nil
 }
 
-func ReadVersionFile() (string, error) {
+func ReadVersionFile() string {
 	dir, err := FindCurrentDir()
-	file := filepath.Join(dir, VERSION_FILE)
 	if err != nil {
-		return "", err
+		return ""
 	}
+	file := filepath.Join(dir, VERSION_FILE)
 	data, err := readFile(file)
 	if err != nil {
-		return "", err
+		return ""
 	}
-	return strings.Replace(data, "\n", "", -1), nil
+	return strings.Replace(data, "\n", "", -1)
 }
 
 func UpdateVersionFile(versionId string) error {
@@ -84,10 +85,8 @@ func DataDir() (string, error) {
 }
 
 func AddHistoryFile(dir string, suffix string, newVersion data.VersionType) error {
-	b, err := json.Marshal(newVersion)
+	newLine, err := versionToString(newVersion)
 	cobra.CheckErr(err)
-	newLine := fmt.Sprintf("%s\n", string(b))
-
 	file := filepath.Join(dir, HISTORY_FILE+suffix)
 	_, err = os.Stat(file)
 	if err != nil {
@@ -97,12 +96,22 @@ func AddHistoryFile(dir string, suffix string, newVersion data.VersionType) erro
 	return appendFile(file, newLine)
 }
 
+func versionToString(version data.VersionType) (string, error) {
+	b, err := json.Marshal(version)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s\n", string(b)), nil
+}
+
 func ListHistory(suffix string) []data.VersionType {
 	dir, err := DataDir()
 	cobra.CheckErr(err)
 	file := filepath.Join(dir, HISTORY_FILE+suffix)
 	content, err := readFile(file)
-	cobra.CheckErr(err)
+	if err != nil {
+		return []data.VersionType{}
+	}
 	lines := strings.Split(content, "\n")
 	var list = make([]data.VersionType, 0)
 	var ver data.VersionType
@@ -115,6 +124,59 @@ func ListHistory(suffix string) []data.VersionType {
 		list = append(list, ver)
 	}
 	return list
+}
+
+func findVersion(versionId string, suffix string) (data.VersionType, error) {
+	list := ListHistory(suffix)
+	for _, ver := range list {
+		if strings.HasPrefix(ver.Id, versionId) {
+			return ver, nil
+		}
+	}
+	return data.VersionType{}, fmt.Errorf("version not found")
+}
+
+func FindVersion(versionId string) (data.VersionType, error) {
+	remoteVersion, err := findVersion(versionId, "")
+	if err == nil {
+		return remoteVersion, nil
+	}
+	localVersion, err := findVersion(versionId, "-local")
+	if err != nil {
+		return localVersion, nil
+	}
+	return data.VersionType{}, fmt.Errorf("version not found")
+}
+
+func MoveVersion(target data.VersionType) {
+	localList := ListHistory("-local")
+	remoteList := ListHistory("")
+
+	newLocalList := make([]data.VersionType, 0)
+	for _, ver := range localList {
+		if ver.Id == target.Id {
+			continue
+		}
+		newLocalList = append(newLocalList, ver)
+	}
+
+	remoteList = append(remoteList, target)
+	sort.Slice(remoteList, func(i, j int) bool {
+		return remoteList[i].Time < remoteList[j].Time
+	})
+
+	writeFile(filepath.Join(DATADIR, HISTORY_FILE), versionListToString(remoteList))
+	writeFile(filepath.Join(DATADIR, HISTORY_FILE+"-local"), versionListToString(newLocalList))
+}
+
+func versionListToString(list []data.VersionType) string {
+	var str = ""
+	for _, ver := range list {
+		line, err := versionToString(ver)
+		cobra.CheckErr(err)
+		str += line + "\n"
+	}
+	return str
 }
 
 func readFile(file string) (string, error) {

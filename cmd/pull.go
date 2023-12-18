@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -14,47 +11,50 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// pullCmd represents the pull command
 var pullCmd = &cobra.Command{
 	Use:   "pull [flags] [version_id]",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Args: cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
+	Short: "pull remote version",
+	Long:  `pull remote version`,
+	Args:  cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// idがあるかどうか。
-		var versionId = ""
-		if len(args) == 1 {
-			// TODO 先頭6文字くらいでもいけるようにする(git like)
-			versionId = args[0]
-		} else {
-			var err error
-			versionId, err = file.ReadVersionFile()
-			cobra.CheckErr(err)
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("datasync.yaml not found.")
+			return
 		}
 
-		// 指定のバージョンをダウンロード
+		var versionId = ""
+		if len(args) == 1 {
+			versionId = args[0]
+		} else {
+			versionId = file.ReadVersionFile()
+		}
+		if versionId == "" {
+			fmt.Println("version not found.")
+			return
+		}
+
+		version, err := file.FindVersion(versionId)
+		if err != nil {
+			fmt.Println("version not found.")
+			return
+		}
+
 		var tmpFile string
 		data.DispatchStorage(setting.Storage, data.StorageFuncTable{
 			Gcs: func(config data.StorageGcsType) {
-				tmpFile = storage.Download(versionId+".zip", config)
+				tmpFile = storage.Download(version.Id+".zip", config)
 			},
 		})
 
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
 
-		err = os.Rename(tmpFile, filepath.Join(dir, versionId+".zip"))
+		err = os.Rename(tmpFile, filepath.Join(dir, version.Id+".zip"))
 		cobra.CheckErr(err)
 
-		// TODO リモートの.datasyncを持ってくる
-
-		fmt.Printf("pull Succeeded. version_id = %s\n", versionId)
+		fmt.Printf("pull Succeeded. version_id = %s\n", version.Id)
 	},
 }
 

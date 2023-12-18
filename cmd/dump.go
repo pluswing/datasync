@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -21,17 +18,18 @@ import (
 
 var message string
 
-// dumpCmd represents the dump command
 var dumpCmd = &cobra.Command{
 	Use:   "dump",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "dump current data",
+	Long:  "dump current data",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("datasync.yaml not found.")
+			return
+		}
+
 		dumpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)
@@ -47,7 +45,6 @@ to quickly create a Cobra application.`,
 			})
 		}
 
-		// zip圧縮
 		zipFile := compress.Compress(dumpDir)
 
 		_uuid, err := uuid.NewRandom()
@@ -55,16 +52,11 @@ to quickly create a Cobra application.`,
 		versionId := _uuid.String()
 		versionId = strings.Replace(versionId, "-", "", -1)
 
-		// .datasyncに移動
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
-		dest := filepath.Join(dir, fmt.Sprintf("%s.zip", versionId))
+		dest := filepath.Join(dir, versionId+".zip")
 		err = os.Rename(zipFile, dest)
 		cobra.CheckErr(err)
-
-		// .datasync/.datasync-local この中がローカルの奴ら。
-		// .datasync/.datasync(-remote) これがリモートのやつ。
-		// messageを使う。
 
 		newVersion := data.VersionType{
 			Id:      versionId,

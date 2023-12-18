@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -15,38 +12,40 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// lsCmd represents the ls command
+var all bool
+
 var lsCmd = &cobra.Command{
 	Use:   "ls",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "list history",
+	Long:  `list history`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// .datasync をsotrageから持ってくる
-		var tmpFile string
-		data.DispatchStorage(setting.Storage, data.StorageFuncTable{
-			Gcs: func(config data.StorageGcsType) {
-				tmpFile = storage.Download(".datasync", config)
-			},
-		})
 
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
 
-		err = os.Rename(tmpFile, filepath.Join(dir, ".datasync"))
-		cobra.CheckErr(err)
+		var remoteList = make([]data.VersionType, 0)
+		if all {
+			var tmpFile string
+			data.DispatchStorage(setting.Storage, data.StorageFuncTable{
+				Gcs: func(config data.StorageGcsType) {
+					tmpFile = storage.Download(".datasync", config)
+				},
+			})
+			os.Rename(tmpFile, filepath.Join(dir, ".datasync"))
+			remoteList = append(remoteList, file.ListHistory("")...)
+		}
 
-		// 読み込む
-		list := file.ListHistory("")
+		localList := file.ListHistory("-local")
 
-		for _, ver := range list {
-			// TODO 出力方法を工夫する
-			//  --oneline
-			//  デフォルトは git log 的な出力。
+		if all {
+			fmt.Println("-- remote versions --")
+			for _, ver := range remoteList {
+				d := time.Unix(ver.Time, 0).Format("2006-01-02 15:04:05")
+				fmt.Printf("%s %s %s\n", ver.Id, d, ver.Message)
+			}
+		}
+		fmt.Println("-- local versions --")
+		for _, ver := range localList {
 			d := time.Unix(ver.Time, 0).Format("2006-01-02 15:04:05")
 			fmt.Printf("%s %s %s\n", ver.Id, d, ver.Message)
 		}
@@ -55,4 +54,6 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(lsCmd)
+
+	lsCmd.Flags().BoolVarP(&all, "all", "a", false, "show with remote history")
 }
