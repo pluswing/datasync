@@ -84,51 +84,9 @@ func DataDir() (string, error) {
 	return d, nil
 }
 
-func AddHistoryFile(dir string, suffix string, newVersion data.VersionType) error {
-	newLine, err := versionToString(newVersion)
-	cobra.CheckErr(err)
-	file := filepath.Join(dir, HISTORY_FILE+suffix)
-	_, err = os.Stat(file)
-	if err != nil {
-		writeFile(file, newLine)
-		return nil
-	}
-	return appendFile(file, newLine)
-}
-
-func versionToString(version data.VersionType) (string, error) {
-	b, err := json.Marshal(version)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s\n", string(b)), nil
-}
-
-func ListHistory(suffix string) []data.VersionType {
-	dir, err := DataDir()
-	cobra.CheckErr(err)
-	file := filepath.Join(dir, HISTORY_FILE+suffix)
-	content, err := readFile(file)
-	if err != nil {
-		return []data.VersionType{}
-	}
-	lines := strings.Split(content, "\n")
-	var list = make([]data.VersionType, 0)
-	var ver data.VersionType
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		err := json.Unmarshal([]byte(line), &ver)
-		cobra.CheckErr(err)
-		list = append(list, ver)
-	}
-	return list
-}
-
 func findVersion(versionId string, suffix string) (data.VersionType, error) {
-	list := ListHistory(suffix)
-	for _, ver := range list {
+	ds := readDataSyncFile(suffix)
+	for _, ver := range ds.Histories {
 		if strings.HasPrefix(ver.Id, versionId) {
 			return ver, nil
 		}
@@ -146,37 +104,6 @@ func FindVersion(versionId string) (data.VersionType, error) {
 		return localVersion, nil
 	}
 	return data.VersionType{}, fmt.Errorf("version not found")
-}
-
-func MoveVersion(target data.VersionType) {
-	localList := ListHistory("-local")
-	remoteList := ListHistory("")
-
-	newLocalList := make([]data.VersionType, 0)
-	for _, ver := range localList {
-		if ver.Id == target.Id {
-			continue
-		}
-		newLocalList = append(newLocalList, ver)
-	}
-
-	remoteList = append(remoteList, target)
-	sort.Slice(remoteList, func(i, j int) bool {
-		return remoteList[i].Time < remoteList[j].Time
-	})
-
-	writeFile(filepath.Join(DATADIR, HISTORY_FILE), versionListToString(remoteList))
-	writeFile(filepath.Join(DATADIR, HISTORY_FILE+"-local"), versionListToString(newLocalList))
-}
-
-func versionListToString(list []data.VersionType) string {
-	var str = ""
-	for _, ver := range list {
-		line, err := versionToString(ver)
-		cobra.CheckErr(err)
-		str += line
-	}
-	return str
 }
 
 func readFile(file string) (string, error) {
@@ -201,6 +128,78 @@ func appendFile(file string, data string) error {
 		return err
 	}
 	err = f.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ReadLocalDataSyncFile() data.DataSyncType {
+	return readDataSyncFile("-local")
+}
+
+func ReadRemoteDataSyncFile() data.DataSyncType {
+	return readDataSyncFile("")
+}
+
+func readDataSyncFile(suffix string) data.DataSyncType {
+	dir, err := DataDir()
+	cobra.CheckErr(err)
+	file := filepath.Join(dir, HISTORY_FILE+suffix)
+	content, err := readFile(file)
+	if err != nil {
+		return data.DataSyncType{
+			Version:   "1",
+			Histories: []data.VersionType{},
+		}
+	}
+	var ds data.DataSyncType
+	err = json.Unmarshal([]byte(content), &ds)
+	cobra.CheckErr(err)
+	return ds
+}
+
+func MoveVersionToRemote(version data.VersionType) {
+	local := ReadLocalDataSyncFile()
+	remote := ReadRemoteDataSyncFile()
+
+	newLocalList := make([]data.VersionType, 0)
+	for _, ver := range local.Histories {
+		if ver.Id == version.Id {
+			continue
+		}
+		newLocalList = append(newLocalList, ver)
+	}
+
+	remote.Histories = append(remote.Histories, version)
+	sort.Slice(remote.Histories, func(i, j int) bool {
+		return remote.Histories[i].Time < remote.Histories[j].Time
+	})
+
+	err := WriteLocalDataSyncFile(local)
+	cobra.CheckErr(err)
+	err = WriteRemoteDataSyncFile(remote)
+	cobra.CheckErr(err)
+}
+
+func WriteLocalDataSyncFile(d data.DataSyncType) error {
+	return writeDataSyncFile(d, "-local")
+}
+
+func WriteRemoteDataSyncFile(d data.DataSyncType) error {
+	return writeDataSyncFile(d, "")
+}
+
+func writeDataSyncFile(d data.DataSyncType, suffix string) error {
+	b, err := json.MarshalIndent(d, "", "    ")
+	if err != nil {
+		return err
+	}
+	dir, err := DataDir()
+	if err != nil {
+		return err
+	}
+	err = writeFile(filepath.Join(dir, HISTORY_FILE+suffix), string(b))
 	if err != nil {
 		return err
 	}

@@ -24,17 +24,13 @@ var dumpCmd = &cobra.Command{
 	Long:  "dump current data",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		_, err := file.FindCurrentDir()
-		if err != nil {
-			fmt.Println("datasync.yaml not found.")
-			return
-		}
-
 		dumpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)
 
+		fmt.Println(setting)
 		for _, target := range setting.Targets {
+			fmt.Println(target)
 			data.DispatchTarget(target, data.TargetFuncTable{
 				Mysql: func(conf data.TargetMysqlType) {
 					dump_mysql.Dump(dumpDir, conf)
@@ -64,7 +60,9 @@ var dumpCmd = &cobra.Command{
 			Message: message,
 		}
 
-		file.AddHistoryFile(dir, "-local", newVersion)
+		local := file.ReadLocalDataSyncFile()
+		local.Histories = append(local.Histories, newVersion)
+		file.WriteLocalDataSyncFile(local)
 		file.UpdateVersionFile(versionId)
 
 		fmt.Printf("dump Succeeded. version_id = %s\n", versionId)

@@ -1,10 +1,10 @@
 package data
 
 type TargetMysqlType struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
+	Host     string `default:"localhost"`
+	Port     int    `default:"3306"`
+	User     string `default:"root"`
+	Password string `default:""`
 	Database string
 }
 
@@ -33,6 +33,10 @@ type SettingType struct {
 }
 
 // ---------------------
+type DataSyncType struct {
+	Version   string        `json:"version"`
+	Histories []VersionType `json:"histories"`
+}
 type VersionType struct {
 	Id      string `json:"id"`
 	Time    int64  `json:"time"`

@@ -20,16 +20,10 @@ var lsCmd = &cobra.Command{
 	Long:  `list history`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		_, err := file.FindCurrentDir()
-		if err != nil {
-			fmt.Println("datasync.yaml not found.")
-			return
-		}
-
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
 
-		var remoteList []data.VersionType
+		var remote data.DataSyncType
 		if all {
 			var tmpFile string
 			data.DispatchStorage(setting.Storage, data.StorageFuncTable{
@@ -38,20 +32,20 @@ var lsCmd = &cobra.Command{
 				},
 			})
 			os.Rename(tmpFile, filepath.Join(dir, ".datasync"))
-			remoteList = file.ListHistory("")
+			remote = file.ReadRemoteDataSyncFile()
 		}
 
-		localList := file.ListHistory("-local")
+		local := file.ReadLocalDataSyncFile()
 
 		if all {
 			fmt.Println("-- remote versions --")
-			for _, ver := range remoteList {
+			for _, ver := range remote.Histories {
 				d := time.Unix(ver.Time, 0).Format("2006-01-02 15:04:05")
 				fmt.Printf("%s %s %s\n", ver.Id, d, ver.Message)
 			}
 		}
 		fmt.Println("-- local versions --")
-		for _, ver := range localList {
+		for _, ver := range local.Histories {
 			d := time.Unix(ver.Time, 0).Format("2006-01-02 15:04:05")
 			fmt.Printf("%s %s %s\n", ver.Id, d, ver.Message)
 		}

@@ -2,22 +2,19 @@ targets:
   - kind: mysql
     config:
       host: localhost
-      port: 3306
+      port: 3300
       user: root
       password: root
       database: sample
-  # - kind: file
-  #   config:
-  #     path: "./cmd"
-  # - kind: file
-  #   config:
-  #     path: "./dump/dump_mysql"
+  - kind: file
+    config:
+      path: "./cmd"
   - kind: file
     config:
       path: "./.vscode"
-  # - kind: file
-  #   config:
-  #     path: "./LICENSE" # TODO ファイルの対応が必要
+  - kind: file
+    config:
+      path: "./LICENSE"
 
 storage:
   kind: gcs
