@@ -37,6 +37,7 @@ type DataSyncType struct {
 	Version   string        `json:"version"`
 	Histories []VersionType `json:"histories"`
 }
+
 type VersionType struct {
 	Id      string `json:"id"`
 	Time    int64  `json:"time"`

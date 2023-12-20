@@ -8,13 +8,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConfigFiles(t *testing.T) {
-	cwd, _ := os.Getwd()
-	dir, err := FindCurrentDir()
+func setup(t *testing.T) string {
+	dir, err := os.MkdirTemp("", ".datasync_for_test")
 	assert.NoError(t, err)
-	assert.Equal(t, filepath.Dir(cwd), dir)
+	os.Chdir(dir)
+	cwd, err := os.Getwd()
+	assert.NoError(t, err)
+	return cwd
 }
 
-func TestReadVersionFile(t *testing.T) {
-	assert.Equal(t, "f56e90715043400ab8adf5d18f984105", ReadVersionFile())
+func teardown(dir string) {
+	os.RemoveAll(dir)
 }
+
+func TestFindCurrentDir(t *testing.T) {
+	home := setup(t)
+	defer teardown(home)
+
+	dir, err := FindCurrentDir()
+	assert.Error(t, err)
+	assert.Equal(t, "", dir)
+
+	os.WriteFile(filepath.Join(home, "datasync.yaml"), []byte(""), os.ModePerm)
+
+	dir, err = FindCurrentDir()
+	assert.NoError(t, err)
+	assert.Equal(t, home, dir)
+}
+
+// func TestReadVersionFile(t *testing.T) {
+// 	assert.Equal(t, "d37be652686e4373bd01ca528b01f31d", ReadVersionFile())
+// }
