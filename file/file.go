@@ -37,7 +37,7 @@ func FindCurrentDir() (string, error) {
 
 func searchFile(dir string, filename string) (string, error) {
 	if dir == filepath.Dir(dir) {
-		return "", fmt.Errorf("file not found")
+		return "", fmt.Errorf("config file not found")
 	}
 	p := filepath.Join(dir, filename)
 	_, err := os.Stat(p)
@@ -62,10 +62,10 @@ func ReadVersionFile() string {
 
 func UpdateVersionFile(versionId string) error {
 	dir, err := FindCurrentDir()
-	file := filepath.Join(dir, VERSION_FILE)
 	if err != nil {
 		return err
 	}
+	file := filepath.Join(dir, VERSION_FILE)
 	return writeFile(file, versionId)
 }
 
