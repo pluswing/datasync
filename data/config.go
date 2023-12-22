@@ -1,5 +1,7 @@
 package data
 
+import "path/filepath"
+
 type TargetMysqlType struct {
 	Host     string `default:"localhost"`
 	Port     int    `default:"3306"`
@@ -42,6 +44,14 @@ type VersionType struct {
 	Id      string `json:"id"`
 	Time    int64  `json:"time"`
 	Message string `json:"message"`
+}
+
+func (v VersionType) FileName() string {
+	return v.Id + ".zip"
+}
+
+func (v VersionType) FileNameWithDir(dir string) string {
+	return filepath.Join(dir, v.FileName())
 }
 
 // ---------------------

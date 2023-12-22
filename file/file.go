@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/pluswing/datasync/data"
 	"github.com/spf13/cobra"
 )
@@ -204,4 +205,27 @@ func writeDataSyncFile(d data.DataSyncType, suffix string) error {
 		return err
 	}
 	return nil
+}
+
+func GetCurrentVersion(args []string) (string, error) {
+	var versionId = ""
+	if len(args) == 1 {
+		versionId = args[0]
+	} else {
+		versionId = ReadVersionFile()
+	}
+	if versionId == "" {
+		return "", fmt.Errorf("version not found.")
+	}
+	return versionId, nil
+}
+
+func NewUUID() (string, error) {
+	_uuid, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+	uuid := _uuid.String()
+	uuid = strings.Replace(uuid, "-", "", -1)
+	return uuid, nil
 }

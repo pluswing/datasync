@@ -3,11 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
 	"github.com/pluswing/datasync/dump/dump_file"
@@ -28,9 +25,7 @@ var dumpCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)
 
-		fmt.Println(setting)
 		for _, target := range setting.Targets {
-			fmt.Println(target)
 			data.DispatchTarget(target, data.TargetFuncTable{
 				Mysql: func(conf data.TargetMysqlType) {
 					dump_mysql.Dump(dumpDir, conf)
@@ -43,15 +38,7 @@ var dumpCmd = &cobra.Command{
 
 		zipFile := compress.Compress(dumpDir)
 
-		_uuid, err := uuid.NewRandom()
-		cobra.CheckErr(err)
-		versionId := _uuid.String()
-		versionId = strings.Replace(versionId, "-", "", -1)
-
-		dir, err := file.DataDir()
-		cobra.CheckErr(err)
-		dest := filepath.Join(dir, versionId+".zip")
-		err = os.Rename(zipFile, dest)
+		versionId, err := file.NewUUID()
 		cobra.CheckErr(err)
 
 		newVersion := data.VersionType{
@@ -59,6 +46,12 @@ var dumpCmd = &cobra.Command{
 			Time:    time.Now().Unix(),
 			Message: message,
 		}
+
+		dir, err := file.DataDir()
+		cobra.CheckErr(err)
+		dest := newVersion.FileNameWithDir(dir)
+		err = os.Rename(zipFile, dest)
+		cobra.CheckErr(err)
 
 		local := file.ReadLocalDataSyncFile()
 		local.Histories = append(local.Histories, newVersion)

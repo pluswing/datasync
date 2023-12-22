@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/pluswing/datasync/compress"
 	"github.com/pluswing/datasync/data"
@@ -20,14 +19,9 @@ var applyCmd = &cobra.Command{
 	Args:  cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var versionId = ""
-		if len(args) == 1 {
-			versionId = args[0]
-		} else {
-			versionId = file.ReadVersionFile()
-		}
-		if versionId == "" {
-			fmt.Println("version not found.")
+		versionId, err := file.GetCurrentVersion(args)
+		if err != nil {
+			fmt.Println(err.Error())
 			return
 		}
 
@@ -39,7 +33,7 @@ var applyCmd = &cobra.Command{
 
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
-		tmpFile := filepath.Join(dir, version.Id+".zip")
+		tmpFile := version.FileNameWithDir(dir)
 
 		s, err := os.Stat(tmpFile)
 		if err != nil || s.IsDir() {

@@ -17,14 +17,9 @@ var pushCmd = &cobra.Command{
 	Args:  cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var versionId = ""
-		if len(args) == 1 {
-			versionId = args[0]
-		} else {
-			versionId = file.ReadVersionFile()
-		}
-		if versionId == "" {
-			fmt.Println("version not found.")
+		versionId, err := file.GetCurrentVersion(args)
+		if err != nil {
+			fmt.Println(err.Error())
 			return
 		}
 
@@ -39,7 +34,7 @@ var pushCmd = &cobra.Command{
 
 		data.DispatchStorage(setting.Storage, data.StorageFuncTable{
 			Gcs: func(conf data.StorageGcsType) {
-				storage.Upload(filepath.Join(dir, version.Id+".zip"), version.Id+".zip", conf)
+				storage.Upload(version.FileNameWithDir(dir), version.FileName(), conf)
 				// FIXME .datasyncを同期したほうが良い。
 				file.MoveVersionToRemote(version)
 				storage.Upload(filepath.Join(dir, ".datasync"), ".datasync", conf)
