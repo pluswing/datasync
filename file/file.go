@@ -95,7 +95,7 @@ func findVersion(versionId string, suffix string) (data.VersionType, error) {
 	return data.VersionType{}, fmt.Errorf("version not found")
 }
 
-func FindVersion(versionId string) (data.VersionType, error) {
+func findVersionLocalAndRemote(versionId string) (data.VersionType, error) {
 	remoteVersion, err := findVersion(versionId, "")
 	if err == nil {
 		return remoteVersion, nil
@@ -119,22 +119,6 @@ func writeFile(file string, data string) error {
 	return os.WriteFile(file, []byte(data), os.ModePerm)
 }
 
-func appendFile(file string, data string) error {
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(data)
-	if err != nil {
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func ReadLocalDataSyncFile() data.DataSyncType {
 	return readDataSyncFile("-local")
 }
@@ -143,20 +127,24 @@ func ReadRemoteDataSyncFile() data.DataSyncType {
 	return readDataSyncFile("")
 }
 
-func readDataSyncFile(suffix string) data.DataSyncType {
+func readDataSyncFile(suffix string) (ds data.DataSyncType) {
+	ds = data.DataSyncType{
+		Version:   "1",
+		Histories: []data.VersionType{},
+	}
 	dir, err := DataDir()
-	cobra.CheckErr(err)
+	if err != nil {
+		return
+	}
 	file := filepath.Join(dir, HISTORY_FILE+suffix)
 	content, err := readFile(file)
 	if err != nil {
-		return data.DataSyncType{
-			Version:   "1",
-			Histories: []data.VersionType{},
-		}
+		return
 	}
-	var ds data.DataSyncType
 	err = json.Unmarshal([]byte(content), &ds)
-	cobra.CheckErr(err)
+	if err != nil {
+		return
+	}
 	return ds
 }
 
@@ -171,6 +159,7 @@ func MoveVersionToRemote(version data.VersionType) {
 		}
 		newLocalList = append(newLocalList, ver)
 	}
+	local.Histories = newLocalList
 
 	remote.Histories = append(remote.Histories, version)
 	sort.Slice(remote.Histories, func(i, j int) bool {
@@ -207,7 +196,7 @@ func writeDataSyncFile(d data.DataSyncType, suffix string) error {
 	return nil
 }
 
-func GetCurrentVersion(args []string) (string, error) {
+func GetCurrentVersion(args []string) (data.VersionType, error) {
 	var versionId = ""
 	if len(args) == 1 {
 		versionId = args[0]
@@ -215,9 +204,14 @@ func GetCurrentVersion(args []string) (string, error) {
 		versionId = ReadVersionFile()
 	}
 	if versionId == "" {
-		return "", fmt.Errorf("version not found.")
+		return data.VersionType{}, fmt.Errorf("version not found.")
 	}
-	return versionId, nil
+
+	version, err := findVersionLocalAndRemote(versionId)
+	if err != nil {
+		return data.VersionType{}, fmt.Errorf("version not found.")
+	}
+	return version, nil
 }
 
 func NewUUID() (string, error) {

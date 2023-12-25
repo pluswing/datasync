@@ -17,15 +17,9 @@ var pushCmd = &cobra.Command{
 	Args:  cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 
-		versionId, err := file.GetCurrentVersion(args)
+		version, err := file.GetCurrentVersion(args)
 		if err != nil {
 			fmt.Println(err.Error())
-			return
-		}
-
-		version, err := file.FindVersion(versionId)
-		if err != nil {
-			fmt.Println("version not found.")
 			return
 		}
 
