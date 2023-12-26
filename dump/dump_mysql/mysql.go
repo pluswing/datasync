@@ -22,7 +22,7 @@ import (
 )
 
 func MysqlDumpFile(dumpDir string, cfg data.TargetMysqlType) string {
-	dumpFilename := fmt.Sprintf("%s-%s.sql", "mysql", cfg.Database)
+	dumpFilename := fmt.Sprintf("%s-%s", "mysql", cfg.Database)
 	dumpFile := filepath.Join(dumpDir, dumpFilename)
 	return dumpFile
 }
@@ -72,7 +72,7 @@ func Import(dumpFile string, cfg data.TargetMysqlType) {
 	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
 
-	content, err := os.ReadFile(dumpFile)
+	content, err := os.ReadFile(dumpFile + ".sql")
 	cobra.CheckErr(err)
 
 	p := parser.New()

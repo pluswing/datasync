@@ -40,3 +40,14 @@ hash code.zip
 hash code.zip
 hash code.zip
 
+
+# これからやること
+
+- バグ修正
+  - mysqlファイルの対応 (済) 未テスト
+- postgresへの対応
+- mysql, postgresコマンドを使う設定を追加
+  - mysqldump, pg_dumpコマンドが入っている前提でそれを使う設定
+  -  use: "native"
+- rmのremote対応
+- aws, samba対応
