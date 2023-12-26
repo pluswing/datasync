@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/pluswing/datasync/data"
 	"github.com/pluswing/datasync/file"
@@ -33,7 +32,7 @@ var pullCmd = &cobra.Command{
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)
 
-		err = os.Rename(tmpFile, version.FileNameWithDir(dir))
+		err = file.MoveFile(tmpFile, version.FileNameWithDir(dir))
 		cobra.CheckErr(err)
 
 		fmt.Printf("pull Succeeded. version_id = %s\n", version.Id)

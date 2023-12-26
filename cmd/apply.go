@@ -38,20 +38,24 @@ var applyCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		defer os.RemoveAll(tmpDir)
 
+		fmt.Println("decompressing...")
 		compress.Decompress(tmpDir, tmpFile)
 
 		for _, target := range setting.Targets {
 			data.DispatchTarget(target, data.TargetFuncTable{
 				Mysql: func(config data.TargetMysqlType) {
-					dump_mysql.Import(tmpDir, config)
+					fmt.Printf("import mysql database = %s\n", config.Database)
+					dump_mysql.Import(dump_mysql.MysqlDumpFile(tmpDir, config), config)
 				},
 				File: func(config data.TargetFileType) {
+					fmt.Printf("copy file(s) directory = %s\n", config.Path)
 					dump_file.Expand(tmpDir, config)
 				},
 			})
 		}
 
-		err = file.UpdateVersionFile(versionId)
+		fmt.Println("finalizing...")
+		err = file.UpdateVersionFile(version.Id)
 		cobra.CheckErr(err)
 
 		fmt.Printf("apply Succeeded. version_id = %s\n", version.Id)

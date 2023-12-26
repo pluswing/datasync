@@ -3,14 +3,21 @@ package compress
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
 )
 
 func Compress(target string) string {
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " compress data ..."
+	s.Start()
+
 	var buffer bytes.Buffer
 	zipWriter := zip.NewWriter(&buffer)
 
@@ -38,6 +45,9 @@ func Compress(target string) string {
 
 	_, err = file.Write(buffer.Bytes())
 	cobra.CheckErr(err)
+
+	s.Stop()
+	fmt.Printf("✔︎ compress data completed.\n")
 
 	return zipFile
 }
@@ -122,6 +132,10 @@ func complementPath(path string) string {
 }
 
 func Decompress(dest, target string) {
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " decompress data ..."
+	s.Start()
+
 	reader, err := zip.OpenReader(target)
 	cobra.CheckErr(err)
 	defer reader.Close()
@@ -135,6 +149,9 @@ func Decompress(dest, target string) {
 			createFileFromZipped(path, zippedFile)
 		}
 	}
+
+	s.Stop()
+	fmt.Printf("✔︎ decompress data completed.\n")
 }
 
 func createFileFromZipped(path string, zippedFile *zip.File) {

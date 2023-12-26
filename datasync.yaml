@@ -6,12 +6,12 @@ targets:
       user: root
       password: root
       database: sample
-  - kind: file
-    config:
-      path: "./cmd"
-  - kind: file
-    config:
-      path: "./.vscode"
+  # - kind: file
+  #   config:
+  #     path: "./cmd"
+  # - kind: file
+  #   config:
+  #     path: "./.vscode"
   - kind: file
     config:
       path: "./LICENSE"

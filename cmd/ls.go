@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -31,7 +30,7 @@ var lsCmd = &cobra.Command{
 					tmpFile = storage.Download(".datasync", config)
 				},
 			})
-			os.Rename(tmpFile, filepath.Join(dir, ".datasync"))
+			file.MoveFile(tmpFile, filepath.Join(dir, ".datasync"))
 			remote = file.ReadRemoteDataSyncFile()
 		}
 
