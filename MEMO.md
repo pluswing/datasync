@@ -51,3 +51,12 @@ hash code.zip
   -  use: "native"
 - rmのremote対応
 - aws, samba対応
+
+- init サブコマンド
+  - bubble tea 使う
+
+- mysql importエラー
+  - packet for query is too large. Try adjusting the `Config.MaxAllowedPacket`
+  - set global max_allowed_packet = 2 * 1024 * 1024 * 1024
+    - で回避可能かと思ったけどそうもいかない模様。
+    - mysqldumpの挙動だと、↑の設定に応じて、insert文が分割される。。

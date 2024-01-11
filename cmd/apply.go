@@ -44,11 +44,9 @@ var applyCmd = &cobra.Command{
 		for _, target := range setting.Targets {
 			data.DispatchTarget(target, data.TargetFuncTable{
 				Mysql: func(config data.TargetMysqlType) {
-					fmt.Printf("import mysql database = %s\n", config.Database)
 					dump_mysql.Import(dump_mysql.MysqlDumpFile(tmpDir, config), config)
 				},
 				File: func(config data.TargetFileType) {
-					fmt.Printf("copy file(s) directory = %s\n", config.Path)
 					dump_file.Expand(tmpDir, config)
 				},
 			})

@@ -39,7 +39,7 @@ func Dump(dumpDir string, cfg data.TargetFileType) {
 
 func Expand(dumpDir string, cfg data.TargetFileType) {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = fmt.Sprintf(" restore file(s) ... (path: %s)", cfg.Path)
+	s.Suffix = fmt.Sprintf(" restore file(s) ... (path: %s)\n", cfg.Path)
 	s.Start()
 
 	cwd, err := file.FindCurrentDir()
@@ -58,5 +58,5 @@ func Expand(dumpDir string, cfg data.TargetFileType) {
 	cobra.CheckErr(err)
 
 	s.Stop()
-	fmt.Printf("✔︎ restore file(s) completed. (path: %s)", cfg.Path)
+	fmt.Printf("✔︎ restore file(s) completed. (path: %s)\n", cfg.Path)
 }

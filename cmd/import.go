@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/pluswing/datasync/data"
 	"github.com/pluswing/datasync/dump/dump_mysql"
 	"github.com/spf13/cobra"
@@ -22,7 +20,6 @@ var importCmd = &cobra.Command{
 			data.DispatchTarget(target, data.TargetFuncTable{
 				Mysql: func(config data.TargetMysqlType) {
 					if database == config.Database {
-						fmt.Printf("import mysql database = %s\n", config.Database)
 						dump_mysql.Import(dumpFile, config)
 					}
 				},

@@ -4,7 +4,7 @@ go 1.21.4
 
 require (
 	cloud.google.com/go/storage v1.30.1
-	github.com/JamesStewy/go-mysqldump v0.2.2
+	github.com/aliakseiz/go-mysqldump v1.0.2
 	github.com/briandowns/spinner v1.23.0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/google/uuid v1.3.1
@@ -22,7 +22,6 @@ require (
 	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.1 // indirect
-	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

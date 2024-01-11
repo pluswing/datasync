@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tidb/parser"
 	"github.com/pingcap/tidb/parser/format"
 	_ "github.com/pingcap/tidb/parser/test_driver"
 
-	"github.com/JamesStewy/go-mysqldump"
+	"github.com/aliakseiz/go-mysqldump"
 
 	"github.com/briandowns/spinner"
 	"github.com/go-sql-driver/mysql"
@@ -22,7 +22,7 @@ import (
 )
 
 func MysqlDumpFile(dumpDir string, cfg data.TargetMysqlType) string {
-	dumpFilename := fmt.Sprintf("%s-%s", "mysql", cfg.Database)
+	dumpFilename := fmt.Sprintf("%s-%s.sql", "mysql", cfg.Database)
 	dumpFile := filepath.Join(dumpDir, dumpFilename)
 	return dumpFile
 }
@@ -39,16 +39,16 @@ func Dump(dumpFile string, cfg data.TargetMysqlType) {
 	config.Net = "tcp"
 	config.Addr = fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
-	filename := filepath.Base(dumpFile)
+	filename := strings.Replace(filepath.Base(dumpFile), ".sql", "", 1)
 	dumpDir := filepath.Dir(dumpFile)
 
 	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
 
-	dumper, err := mysqldump.Register(db, dumpDir, filename)
+	dumper, err := mysqldump.Register(db, dumpDir, filename, config.DBName)
 	cobra.CheckErr(err)
 
-	_, err = dumper.Dump()
+	err = dumper.Dump()
 	cobra.CheckErr(err)
 
 	dumper.Close()
@@ -72,14 +72,15 @@ func Import(dumpFile string, cfg data.TargetMysqlType) {
 	db, err := sql.Open("mysql", config.FormatDSN())
 	cobra.CheckErr(err)
 
-	content, err := os.ReadFile(dumpFile + ".sql")
+	content, err := os.ReadFile(dumpFile)
 	cobra.CheckErr(err)
 
 	p := parser.New()
 
 	stmts, _, err := p.Parse(string(content), "", "")
 	if err != nil {
-		log.Fatalf("failed to parse seed sql: %v", err)
+		fmt.Printf("failed to parse seed sql: %v\n", err)
+		return
 	}
 
 	var buf bytes.Buffer
@@ -91,7 +92,7 @@ func Import(dumpFile string, cfg data.TargetMysqlType) {
 
 		sql := buf.String()
 		if _, err := db.Exec(sql); err != nil {
-			log.Fatalf("failed to execute sql: err=%v sql=%s", err, sql[:100])
+			fmt.Printf("failed to execute sql: err=%v sql=%s\n", err, sql[:100])
 		}
 	}
 	s.Stop()
