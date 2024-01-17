@@ -137,7 +137,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.targets = append(m.targets, t)
 						// 次のスクリーンに行く。
 						m.screenType = ConfirmAddTarget
-						m.focusIndex = 0
+						m.focusIndex = 1
 						m.inputs = make([]textinput.Model, 0)
 					} else {
 						m.focusIndex += 1
@@ -162,6 +162,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, tea.Batch(cmds...)
 
+			}
+		}
+	case ConfirmAddTarget:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "ctrl+c", "esc":
+				return m, tea.Quit
+			case "up":
+				if m.focusIndex == 1 {
+					m.focusIndex = 0
+				}
+			case "down":
+				if m.focusIndex == 0 {
+					m.focusIndex = 1
+				}
+			case "enter":
+				if m.focusIndex == 0 {
+					m.screenType = SelectTargetKind
+					m.focusIndex = 0
+				} else {
+					// TODO
+					m.screenType = ConfirmSetupRemote
+					m.focusIndex = 0
+				}
 			}
 		}
 	default:
@@ -208,9 +233,6 @@ func makeMysqlInputs() []textinput.Model {
 
 func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputs))
-
-	// Only text inputs with Focus() set will respond, so it's safe to simply
-	// update all of them here without any further logic.
 	for i := range m.inputs {
 		m.inputs[i], cmds[i] = m.inputs[i].Update(msg)
 	}
@@ -224,24 +246,34 @@ func (m model) View() string {
 	switch m.screenType {
 	case SelectTargetKind:
 		b.WriteString("? How kind of dump target? …\n")
-		if m.focusIndex == 0 {
-			b.WriteString("❯ MySQL\n")
-			b.WriteString("  File(s)\n")
-		} else {
-			b.WriteString("  MySQL\n")
-			b.WriteString("❯ File(s)\n")
-		}
+		ViewSelect(&b, m.focusIndex, []string{"MySQL", "File(s)"})
 	case InputMysql:
-		b.WriteString("Input mysql setting …\n")
-		for i := range m.inputs {
-			b.WriteString(m.inputs[i].View())
-			if i < len(m.inputs)-1 {
-				b.WriteRune('\n')
-			}
+		b.WriteString("Input mysql setting …\n") // FIXME これだけ残る。なんとかする。
+		ViewInputs(&b, m.inputs)
+	case ConfirmAddTarget:
+		b.WriteString("? Add dump target? …\n")
+		ViewSelect(&b, m.focusIndex, []string{"Yes", "No"})
+	}
+	return b.String()
+}
+
+func ViewSelect(b *strings.Builder, focusIndex int, texts []string) {
+	for i, t := range texts {
+		if focusIndex == i {
+			b.WriteString(focusedStyle.Render(fmt.Sprintf("❯ %s\n", t)))
+		} else {
+			b.WriteString(fmt.Sprintf("\r  %s\n", t))
 		}
 	}
+}
 
-	return b.String()
+func ViewInputs(b *strings.Builder, inputs []textinput.Model) {
+	for i := range inputs {
+		b.WriteString(inputs[i].View())
+		if i < len(inputs)-1 {
+			b.WriteRune('\n')
+		}
+	}
 }
 
 /*
