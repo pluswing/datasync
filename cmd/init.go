@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -54,6 +57,14 @@ const (
 	InputGcs
 )
 
+type clearErrorMsg struct{}
+
+func clearErrorAfter(t time.Duration) tea.Cmd {
+	return tea.Tick(t, func(_ time.Time) tea.Msg {
+		return clearErrorMsg{}
+	})
+}
+
 type model struct {
 	screenType ScreenType
 
@@ -61,7 +72,11 @@ type model struct {
 	focusIndex int
 	inputs     []textinput.Model
 
-	// TODO
+	// ファイル選択
+	filepicker   filepicker.Model
+	selectedFile string
+	quitting     bool
+	err          error
 
 	targets []interface{}
 }
@@ -95,9 +110,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.focusIndex = 1
 				}
 			case "enter":
-				m.screenType = InputMysql
-				m.focusIndex = 0
-				m.inputs = makeMysqlInputs()
+				if m.focusIndex == 0 {
+					m.screenType = InputMysql
+					m.focusIndex = 0
+					m.inputs = makeMysqlInputs()
+				} else {
+					m.screenType = InputFile
+					m.focusIndex = 0
+					m.inputs = make([]textinput.Model, 0)
+					fp := filepicker.New()
+					// fp.DirAllowed = true
+					fp.AllowedTypes = []string{".mod", ".sum", ".go", ".txt", ".md"}
+					fp.CurrentDirectory, _ = os.Getwd()
+					fp.Init()
+					m.filepicker = fp
+				}
 			}
 		}
 	case InputMysql:
@@ -164,6 +191,37 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			}
 		}
+	case InputFile:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "ctrl+c", "esc":
+				m.quitting = true
+				return m, tea.Quit
+			}
+		case clearErrorMsg:
+			m.err = nil
+		}
+
+		var cmd tea.Cmd
+		m.filepicker, cmd = m.filepicker.Update(msg)
+
+		// Did the user select a file?
+		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
+			// Get the path of the selected file.
+			m.selectedFile = path
+		}
+
+		// Did the user select a disabled file?
+		// This is only necessary to display an error to the user.
+		if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
+			// Let's clear the selectedFile and display an error.
+			m.err = errors.New(path + " is not valid.")
+			m.selectedFile = ""
+			return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
+		}
+
+		return m, cmd
 	case ConfirmAddTarget:
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -250,6 +308,16 @@ func (m model) View() string {
 	case InputMysql:
 		b.WriteString("Input mysql setting …\n") // FIXME これだけ残る。なんとかする。
 		ViewInputs(&b, m.inputs)
+	case InputFile:
+		b.WriteString("Select file or directory …\n")
+		if m.err != nil {
+			b.WriteString(m.filepicker.Styles.DisabledFile.Render(m.err.Error()))
+		} else if m.selectedFile == "" {
+			b.WriteString("Pick a file:")
+		} else {
+			b.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
+		}
+		b.WriteString("\n\n" + m.filepicker.View() + "\n")
 	case ConfirmAddTarget:
 		b.WriteString("? Add dump target? …\n")
 		ViewSelect(&b, m.focusIndex, []string{"Yes", "No"})
