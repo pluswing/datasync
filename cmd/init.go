@@ -73,10 +73,8 @@ type model struct {
 	inputs     []textinput.Model
 
 	// ファイル選択
-	filepicker   filepicker.Model
-	selectedFile string
-	quitting     bool
-	err          error
+	filepicker filepicker.Model
+	err        error
 
 	targets []interface{}
 }
@@ -96,37 +94,7 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.screenType {
 	case SelectTargetKind:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch msg.String() {
-			case "ctrl+c", "esc":
-				return m, tea.Quit
-			case "up":
-				if m.focusIndex == 1 {
-					m.focusIndex = 0
-				}
-			case "down":
-				if m.focusIndex == 0 {
-					m.focusIndex = 1
-				}
-			case "enter":
-				if m.focusIndex == 0 {
-					m.screenType = InputMysql
-					m.focusIndex = 0
-					m.inputs = makeMysqlInputs()
-				} else {
-					m.screenType = InputFile
-					m.focusIndex = 0
-					m.inputs = make([]textinput.Model, 0)
-					fp := filepicker.New()
-					// fp.DirAllowed = true
-					fp.AllowedTypes = []string{".mod", ".sum", ".go", ".txt", ".md"}
-					fp.CurrentDirectory, _ = os.Getwd()
-					fp.Init()
-					m.filepicker = fp
-				}
-			}
-		}
+		return updateSelectTargetKind(m, msg)
 	case InputMysql:
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -188,7 +156,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.inputs[i].TextStyle = noStyle
 				}
 				return m, tea.Batch(cmds...)
-
 			}
 		}
 	case InputFile:
@@ -196,7 +163,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyMsg:
 			switch msg.String() {
 			case "ctrl+c", "esc":
-				m.quitting = true
 				return m, tea.Quit
 			}
 		case clearErrorMsg:
@@ -206,18 +172,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.filepicker, cmd = m.filepicker.Update(msg)
 
-		// Did the user select a file?
 		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
-			// Get the path of the selected file.
-			m.selectedFile = path
+			cwd, _ := os.Getwd()
+			path = strings.Replace(path, cwd, "", 1)
+			fmt.Printf("path = %s\n", path)
+			var t = data.TargetType{
+				Kind: "file",
+				Config: data.TargetFileType{
+					Path: path,
+				},
+			}
+			m.targets = append(m.targets, t)
+			m.screenType = ConfirmAddTarget
+			m.focusIndex = 1
+			m.inputs = make([]textinput.Model, 0)
 		}
 
-		// Did the user select a disabled file?
-		// This is only necessary to display an error to the user.
 		if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
-			// Let's clear the selectedFile and display an error.
 			m.err = errors.New(path + " is not valid.")
-			m.selectedFile = ""
 			return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
 		}
 
@@ -254,6 +226,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle character input and blinking
 	cmd := m.updateInputs(msg)
 
+	return m, cmd
+}
+
+func updateSelectTargetKind(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "esc":
+			return m, tea.Quit
+		case "up":
+			if m.focusIndex == 1 {
+				m.focusIndex = 0
+			}
+		case "down":
+			if m.focusIndex == 0 {
+				m.focusIndex = 1
+			}
+		case "enter":
+			if m.focusIndex == 0 {
+				m.screenType = InputMysql
+				m.focusIndex = 0
+				m.inputs = makeMysqlInputs()
+			} else {
+				m.screenType = InputFile
+				m.focusIndex = 0
+				m.inputs = make([]textinput.Model, 0)
+				fp := filepicker.New()
+				fp.DirAllowed = true
+				fp.CurrentDirectory, _ = os.Getwd()
+				fp.Height = 10
+				cmd := fp.Init()
+				m.filepicker = fp
+				return m, cmd
+			}
+		}
+	}
+	cmd := m.updateInputs(msg)
 	return m, cmd
 }
 
@@ -309,13 +318,11 @@ func (m model) View() string {
 		b.WriteString("Input mysql setting …\n") // FIXME これだけ残る。なんとかする。
 		ViewInputs(&b, m.inputs)
 	case InputFile:
-		b.WriteString("Select file or directory …\n")
 		if m.err != nil {
 			b.WriteString(m.filepicker.Styles.DisabledFile.Render(m.err.Error()))
-		} else if m.selectedFile == "" {
-			b.WriteString("Pick a file:")
 		} else {
-			b.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
+			b.WriteString("Pick a file or directory:\n")
+			// b.WriteString("<- : Parent Directory, -> : Dig Directory, enter : select")
 		}
 		b.WriteString("\n\n" + m.filepicker.View() + "\n")
 	case ConfirmAddTarget:
