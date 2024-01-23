@@ -18,6 +18,11 @@ var lsCmd = &cobra.Command{
 	Short: "list history",
 	Long:  `list history`,
 	Run: func(cmd *cobra.Command, args []string) {
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("datasync.yaml not found.\nPlease run `datasync init`")
+			return
+		}
 
 		dir, err := file.DataDir()
 		cobra.CheckErr(err)

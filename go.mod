@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/google/uuid v1.3.1
 	github.com/mcuadros/go-defaults v1.2.0
 	github.com/mitchellh/mapstructure v1.5.0

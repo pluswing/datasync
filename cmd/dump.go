@@ -21,6 +21,12 @@ var dumpCmd = &cobra.Command{
 	Long:  "dump current data",
 	Run: func(cmd *cobra.Command, args []string) {
 
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("datasync.yaml not found.\nPlease run `datasync init`")
+			return
+		}
+
 		dumpDir, err := file.MakeTempDir()
 		cobra.CheckErr(err)
 		defer os.RemoveAll(dumpDir)

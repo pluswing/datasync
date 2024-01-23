@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/pluswing/datasync/data"
@@ -39,21 +38,16 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		dir, err := file.FindCurrentDir()
-		if err != nil {
-			fmt.Println("datasync.yaml not found.")
-			return
+		if err == nil {
+			viper.AddConfigPath(dir)
+			viper.SetConfigType("yaml")
+			viper.SetConfigName("datasync")
 		}
-
-		viper.AddConfigPath(dir)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("datasync")
-		fmt.Println(dir)
 	}
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	err := viper.ReadInConfig()
+	cobra.CheckErr(err)
 
-	err := viper.Unmarshal(&setting)
+	err = viper.Unmarshal(&setting)
 	cobra.CheckErr(err)
 }

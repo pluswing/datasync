@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +13,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/go-yaml/yaml"
 	"github.com/pluswing/datasync/data"
+	"github.com/pluswing/datasync/file"
 	"github.com/spf13/cobra"
 )
 
@@ -21,11 +24,17 @@ var initCmd = &cobra.Command{
 	Short: "generate datasync.yaml",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		_, err := file.FindCurrentDir()
+		if err == nil {
+			fmt.Println("already datasync.yaml file.")
+			return
+		}
+
 		if _, err := tea.NewProgram(initialModel()).Run(); err != nil {
 			fmt.Printf("could not start program: %s\n", err)
 			os.Exit(1)
 		}
-		// Bubble teaを使って、UIを作る。
 	},
 }
 
@@ -70,14 +79,14 @@ type model struct {
 	filepicker filepicker.Model
 	err        error
 
-	targets []interface{}
-	storage interface{}
+	targets []data.TargetType
+	storage data.StorageType
 }
 
 func initialModel() model {
 	m := model{
 		screenType: SelectTargetKind,
-		targets:    make([]interface{}, 0),
+		targets:    make([]data.TargetType, 0),
 	}
 	return m
 }
@@ -87,160 +96,51 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "esc":
+			return m, tea.Quit
+		}
+	}
+
 	switch m.screenType {
 	case SelectTargetKind:
 		return updateSelectTargetKind(m, msg)
 	case InputMysql:
 		return updateInputMysql(m, msg)
 	case InputFile:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch msg.String() {
-			case "ctrl+c", "esc":
-				return m, tea.Quit
-			}
-		case clearErrorMsg:
-			m.err = nil
-		}
-
-		var cmd tea.Cmd
-		m.filepicker, cmd = m.filepicker.Update(msg)
-
-		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
-			cwd, _ := os.Getwd()
-			path = strings.Replace(path, cwd, "", 1)
-			fmt.Printf("path = %s\n", path)
-			var t = data.TargetType{
-				Kind: "file",
-				Config: data.TargetFileType{
-					Path: path,
-				},
-			}
-			m.targets = append(m.targets, t)
-			m.screenType = ConfirmAddTarget
-			m.focusIndex = 1
-			m.inputs = make([]textinput.Model, 0)
-		}
-
-		if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
-			m.err = errors.New(path + " is not valid.")
-			return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
-		}
-
-		return m, cmd
+		return updateInputFile(m, msg)
 	case ConfirmAddTarget:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch msg.String() {
-			case "ctrl+c", "esc":
-				return m, tea.Quit
-			case "up":
-				if m.focusIndex == 1 {
-					m.focusIndex = 0
-				}
-			case "down":
-				if m.focusIndex == 0 {
-					m.focusIndex = 1
-				}
-			case "enter":
-				if m.focusIndex == 0 {
-					m.screenType = SelectTargetKind
-					m.focusIndex = 0
-				} else {
-					// TODO
-					m.screenType = ConfirmSetupRemote
-					m.focusIndex = 0
-				}
-			}
-		}
+		return updateConfirmAddTarget(m, msg)
 	case ConfirmSetupRemote:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch msg.String() {
-			case "ctrl+c", "esc":
-				return m, tea.Quit
-			case "up":
-				if m.focusIndex == 1 {
-					m.focusIndex = 0
-				}
-			case "down":
-				if m.focusIndex == 0 {
-					m.focusIndex = 1
-				}
-			case "enter":
-				if m.focusIndex == 0 {
-					m.screenType = InputGcs
-					m.focusIndex = 0
-					m.inputs = makeGcsInputs()
-				} else {
-					writeConfig(m)
-					finish()
-				}
-			}
-		}
+		return updateConfirmSetupRemote(m, msg)
 	case InputGcs:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch msg.String() {
-			case "ctrl+c", "esc":
-				return m, tea.Quit
-			case "enter", "up", "down":
-				s := msg.String()
-				if s == "up" {
-					m.focusIndex -= 1
-					if m.focusIndex < 0 {
-						m.focusIndex = 0
-					}
-				} else if s == "down" {
-					m.focusIndex += 1
-					if m.focusIndex >= len(m.inputs) {
-						m.focusIndex = len(m.inputs) - 1
-					}
-				} else if s == "enter" {
-					if m.focusIndex == len(m.inputs)-1 {
-						var s = data.StorageType{
-							Kind: "gcs",
-							Config: data.StorageGcsType{
-								Bucket: m.inputs[0].Value(),
-								Dir:    m.inputs[1].Value(),
-							},
-						}
-						m.storage = s
-						writeConfig(m)
-						finish()
-					} else {
-						m.focusIndex += 1
-						if m.focusIndex >= len(m.inputs) {
-							m.focusIndex = len(m.inputs) - 1
-						}
-					}
-				}
-				cmds := make([]tea.Cmd, len(m.inputs))
-				for i := 0; i <= len(m.inputs)-1; i++ {
-					if i == m.focusIndex {
-						// Set focused state
-						cmds[i] = m.inputs[i].Focus()
-						m.inputs[i].PromptStyle = focusedStyle
-						m.inputs[i].TextStyle = focusedStyle
-						continue
-					}
-					// Remove focused state
-					m.inputs[i].Blur()
-					m.inputs[i].PromptStyle = noStyle
-					m.inputs[i].TextStyle = noStyle
-				}
-				return m, tea.Batch(cmds...)
-			}
-		}
+		return updateInputGcs(m, msg)
 	default:
 		panic("invalid screenType")
 	}
-	cmd := m.updateInputs(msg)
-	return m, cmd
 }
 
-func writeConfig(m model) {
-	// TODO
+func writeConfig(m model) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	s := data.SettingType{
+		Targets: m.targets,
+		Storage: m.storage,
+	}
+
+	b, err := yaml.Marshal(s)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(filepath.Join(cwd, "datasync.yaml"), b, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func finish() {
@@ -248,12 +148,36 @@ func finish() {
 	os.Exit(0)
 }
 
+func updateConfirmAddTarget(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up":
+			if m.focusIndex == 1 {
+				m.focusIndex = 0
+			}
+		case "down":
+			if m.focusIndex == 0 {
+				m.focusIndex = 1
+			}
+		case "enter":
+			if m.focusIndex == 0 {
+				m.screenType = SelectTargetKind
+				m.focusIndex = 0
+			} else {
+				m.screenType = ConfirmSetupRemote
+				m.focusIndex = 0
+			}
+		}
+	}
+	cmd := m.updateInputs(msg)
+	return m, cmd
+}
+
 func updateSelectTargetKind(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
-			return m, tea.Quit
 		case "up":
 			if m.focusIndex == 1 {
 				m.focusIndex = 0
@@ -289,8 +213,6 @@ func updateInputMysql(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
-			return m, tea.Quit
 		case "enter", "up", "down":
 			s := msg.String()
 			if s == "up" {
@@ -331,25 +253,133 @@ func updateInputMysql(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
-			cmds := make([]tea.Cmd, len(m.inputs))
-			for i := 0; i <= len(m.inputs)-1; i++ {
-				if i == m.focusIndex {
-					// Set focused state
-					cmds[i] = m.inputs[i].Focus()
-					m.inputs[i].PromptStyle = focusedStyle
-					m.inputs[i].TextStyle = focusedStyle
-					continue
-				}
-				// Remove focused state
-				m.inputs[i].Blur()
-				m.inputs[i].PromptStyle = noStyle
-				m.inputs[i].TextStyle = noStyle
-			}
-			return m, tea.Batch(cmds...)
+			return updateInputFocus(m)
 		}
 	}
 	cmd := m.updateInputs(msg)
 	return m, cmd
+}
+
+func updateInputFile(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case clearErrorMsg:
+		m.err = nil
+	}
+
+	// TODO CWDより上にはいけないように制御したい。
+	//　=> msgをここで取って、←と→の回数をカウントしておいて、うまいことやる
+
+	var cmd tea.Cmd
+	m.filepicker, cmd = m.filepicker.Update(msg)
+
+	if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
+		cwd, _ := os.Getwd()
+		path = "." + strings.Replace(path, cwd, "", 1)
+		var t = data.TargetType{
+			Kind: "file",
+			Config: data.TargetFileType{
+				Path: path,
+			},
+		}
+		m.targets = append(m.targets, t)
+		m.screenType = ConfirmAddTarget
+		m.focusIndex = 1
+		m.inputs = make([]textinput.Model, 0)
+	}
+
+	if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
+		m.err = errors.New(path + " is not valid.")
+		return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
+	}
+
+	return m, cmd
+}
+
+func updateConfirmSetupRemote(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up":
+			if m.focusIndex == 1 {
+				m.focusIndex = 0
+			}
+		case "down":
+			if m.focusIndex == 0 {
+				m.focusIndex = 1
+			}
+		case "enter":
+			if m.focusIndex == 0 {
+				m.screenType = InputGcs
+				m.focusIndex = 0
+				m.inputs = makeGcsInputs()
+			} else {
+				err := writeConfig(m)
+				cobra.CheckErr(err)
+				finish()
+			}
+		}
+	}
+	cmd := m.updateInputs(msg)
+	return m, cmd
+}
+
+func updateInputGcs(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "enter", "up", "down":
+			s := msg.String()
+			if s == "up" {
+				m.focusIndex -= 1
+				if m.focusIndex < 0 {
+					m.focusIndex = 0
+				}
+			} else if s == "down" {
+				m.focusIndex += 1
+				if m.focusIndex >= len(m.inputs) {
+					m.focusIndex = len(m.inputs) - 1
+				}
+			} else if s == "enter" {
+				if m.focusIndex == len(m.inputs)-1 {
+					var s = data.StorageType{
+						Kind: "gcs",
+						Config: data.StorageGcsType{
+							Bucket: m.inputs[0].Value(),
+							Dir:    m.inputs[1].Value(),
+						},
+					}
+					m.storage = s
+					err := writeConfig(m)
+					cobra.CheckErr(err)
+					finish()
+				} else {
+					m.focusIndex += 1
+					if m.focusIndex >= len(m.inputs) {
+						m.focusIndex = len(m.inputs) - 1
+					}
+				}
+			}
+			return updateInputFocus(m)
+		}
+	}
+	cmd := m.updateInputs(msg)
+	return m, cmd
+}
+
+func updateInputFocus(m model) (tea.Model, tea.Cmd) {
+	cmds := make([]tea.Cmd, len(m.inputs))
+	for i := 0; i <= len(m.inputs)-1; i++ {
+		if i == m.focusIndex {
+			cmds[i] = m.inputs[i].Focus()
+			m.inputs[i].PromptStyle = focusedStyle
+			m.inputs[i].TextStyle = focusedStyle
+			continue
+		}
+		m.inputs[i].Blur()
+		m.inputs[i].PromptStyle = noStyle
+		m.inputs[i].TextStyle = noStyle
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func makeMysqlInputs() []textinput.Model {
@@ -365,6 +395,7 @@ func makeMysqlInputs() []textinput.Model {
 	t.TextStyle = focusedStyle
 	inputs = append(inputs, t)
 
+	// TODO 数値のみにしたい
 	t = textinput.New()
 	t.Placeholder = "port (default: 3306)"
 	inputs = append(inputs, t)
@@ -415,40 +446,40 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 
 func (m model) View() string {
 	var b strings.Builder
-
 	switch m.screenType {
 	case SelectTargetKind:
 		b.WriteString("? How kind of dump target? …\n")
-		ViewSelect(&b, m.focusIndex, []string{"MySQL", "File(s)"})
+		viewSelect(&b, m.focusIndex, []string{"MySQL", "File(s)"})
 	case InputMysql:
 		b.WriteString("Input mysql setting …\n") // FIXME これだけ残る。なんとかする。
-		ViewInputs(&b, m.inputs)
+		viewInputs(&b, m.inputs)
 	case InputFile:
-		ViewFilePicker(&b, m.filepicker, m.err)
+		viewFilePicker(&b, m.filepicker, m.err)
 	case ConfirmAddTarget:
 		b.WriteString("? Add dump target? …\n")
-		ViewSelect(&b, m.focusIndex, []string{"Yes", "No"})
+		viewSelect(&b, m.focusIndex, []string{"Yes", "No"})
 	case ConfirmSetupRemote:
 		b.WriteString("? Setup remote server? …\n")
-		ViewSelect(&b, m.focusIndex, []string{"Yes", "No"})
+		viewSelect(&b, m.focusIndex, []string{"Yes", "No"})
 	case InputGcs:
 		b.WriteString("Input GCS setting …\n")
-		ViewInputs(&b, m.inputs)
+		viewInputs(&b, m.inputs)
 	}
 	return b.String()
 }
 
-func ViewFilePicker(b *strings.Builder, filepicker filepicker.Model, err error) {
+func viewFilePicker(b *strings.Builder, filepicker filepicker.Model, err error) {
 	if err != nil {
 		b.WriteString(filepicker.Styles.DisabledFile.Render(err.Error()))
 	} else {
 		b.WriteString("Pick a file or directory:\n")
+		// TODO 使い方を出したい。
 		// b.WriteString("<- : Parent Directory, -> : Dig Directory, enter : select")
 	}
 	b.WriteString("\n\n" + filepicker.View() + "\n")
 }
 
-func ViewSelect(b *strings.Builder, focusIndex int, texts []string) {
+func viewSelect(b *strings.Builder, focusIndex int, texts []string) {
 	for i, t := range texts {
 		if focusIndex == i {
 			b.WriteString(focusedStyle.Render(fmt.Sprintf("❯ %s\n", t)))
@@ -458,7 +489,7 @@ func ViewSelect(b *strings.Builder, focusIndex int, texts []string) {
 	}
 }
 
-func ViewInputs(b *strings.Builder, inputs []textinput.Model) {
+func viewInputs(b *strings.Builder, inputs []textinput.Model) {
 	for i := range inputs {
 		b.WriteString(inputs[i].View())
 		if i < len(inputs)-1 {

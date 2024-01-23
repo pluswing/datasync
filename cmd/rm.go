@@ -16,6 +16,12 @@ var rmCmd = &cobra.Command{
 	Long:  `remove dump`,
 	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("datasync.yaml not found.\nPlease run `datasync init`")
+			return
+		}
+
 		versionId := args[0]
 
 		ds := file.ReadLocalDataSyncFile()

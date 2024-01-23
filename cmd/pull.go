@@ -15,6 +15,11 @@ var pullCmd = &cobra.Command{
 	Long:  `pull remote version`,
 	Args:  cobra.MatchAll(cobra.RangeArgs(0, 1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
+		_, err := file.FindCurrentDir()
+		if err != nil {
+			fmt.Println("datasync.yaml not found.\nPlease run `datasync init`")
+			return
+		}
 
 		version, err := file.GetCurrentVersion(args)
 		if err != nil {
