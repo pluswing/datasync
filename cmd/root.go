@@ -38,11 +38,12 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		dir, err := file.FindCurrentDir()
-		if err == nil {
-			viper.AddConfigPath(dir)
-			viper.SetConfigType("yaml")
-			viper.SetConfigName("datasync")
+		if err != nil {
+			return
 		}
+		viper.AddConfigPath(dir)
+		viper.SetConfigType("yaml")
+		viper.SetConfigName("datasync")
 	}
 
 	err := viper.ReadInConfig()

@@ -199,6 +199,7 @@ func updateSelectTargetKind(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				fp.DirAllowed = true
 				fp.CurrentDirectory, _ = os.Getwd()
 				fp.Height = 10
+				fp.ShowHidden = true
 				cmd := fp.Init()
 				m.filepicker = fp
 				return m, cmd
