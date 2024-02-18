@@ -1,4 +1,6 @@
 # DataSync
+[English](https://github.com/pluswing/datasync/blob/develop/README.md) [日本語](https://github.com/pluswing/datasync/blob/develop/README_ja.md)
+
 
 開発者のためのデータベース共有ツール
 
