@@ -1,28 +1,30 @@
 # DataSync
+[English](https://github.com/pluswing/datasync/blob/develop/README.md) [日本語](https://github.com/pluswing/datasync/blob/develop/README_ja.md)
 
-開発者のためのデータベース共有ツール
+A database sharing tool for developers
 
-## これはなに？
-開発作業中にデータベースの内容をチームメンバーと共有すること、ありますよね？
-DataSyncは、開発者が直面する一般的な問題を解決します。
-データベースのバックアップ作成、共有、適用が面倒で時間がかかり、しばしば複雑です。
-DataSyncを使用すると、これらのプロセスがシンプルかつ効率的になります。
-例えば、新しい機能のテストやバグの再現に必要なデータを、チームメンバーに簡単に渡すことができます。
-これにより、開発サイクルを高速化し、より生産的な活動に注力できます。
+## What is this?
+Have you ever needed to share the contents of a database with your team members during development work?
+DataSync solves a common problem faced by developers.
+Creating backups of databases, sharing them, and applying them can be cumbersome, time-consuming, and often complex.
+Using DataSync, these processes become simple and efficient.
+For example, you can easily pass on data needed for testing new features or reproducing bugs to your team members.
+This speeds up the development cycle and allows you to focus on more productive activities.
 
-## 概要
-DataSyncは、mysqlおよびファイルのバックアップ、履歴管理、そして任意のバックアップの迅速な適用を可能にするツールです。
+## Overview
+DataSync is a tool that enables backup, history management, and quick application of any backup for MySQL and files.
 
-主要な機能には以下のものがあります：
+Key features include:
 
-- データベースとファイルのバックアップ
-- バックアップの履歴管理
-- 任意のバックアップの適用
-- クラウドストレージとの連携によるバックアップの簡単な共有と取得
+- Backup of databases and files
+- History management of backups
+- Application of any backup
+- Easy sharing and retrieval of backups through integration with cloud storage
 
-## 使い方の例
+## Examples of Use
 
-### バックアップ実行
+### Executing a Backup
+
 ```
 $ datasync dump -m "feature_test"
 ✔️ mysql dump completed (database: sample)
@@ -30,7 +32,7 @@ $ datasync dump -m "feature_test"
 Dump succeeded. Version ID = 35ca8d497d334891b2ff627174a2b88a
 ```
 
-### バックアップの一覧を表示
+### Listing Backups
 ```
 $ datasync ls -a
 -- Remote versions --
@@ -39,7 +41,7 @@ $ datasync ls -a
 35ca8d497d334891b2ff627174a2b88a 2024-02-10 09:33:27 test002
 ```
 
-### バックアップの適用
+### Applying a Backup
 ```
 $ datasync apply 35ca8d4
 ✔︎ decompress data completed.
@@ -47,26 +49,26 @@ $ datasync apply 35ca8d4
 Apply succeeded. Version ID = 35ca8d497d334891b2ff627174a2b88a
 ```
 
-### クラウドへバックアップを送信
+### Sending a Backup to the Cloud
 ```
 $ datasync push
 ```
 
-### クラウドからバックアップを取得
+### Retrieving a Backup from the Cloud
 ```
 $ datasync pull
 ```
 
-## インストール
-DataSyncは依存のない1ファイルバイナリです。以下の手順に従ってください：
+## Installation
+DataSync is a standalone single-file binary. Please follow the steps below:
 
-1. [Releasesページ](https://github.com/pluswing/datasync/releases)から最新のDataSyncをダウンロードします。
-2. ダウンロードしたファイルを任意の場所に保存します。
-3. コマンドラインから、保存した場所に移動し、以下のコマンドを実行してDataSyncを初期化します：
+1. Download the latest DataSync from the [Releases page](https://github.com/pluswing/datasync/releases).
+2. Save the downloaded file to any location.
+3. Move to the location where you saved the file from the command line, and run the following command to initialize DataSync:
 ```
 datasync init
 ```
-これで、準備完了です！
+Now, you are ready to go!
 
 ## License
 MIT License
